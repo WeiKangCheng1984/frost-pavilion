@@ -385,10 +385,24 @@ test("字級暗門大大大中中中小小小進入第七關", () => {
   assert.equal(state.flags.introDone, true);
   assert.equal(state.timer.running, true);
   assert.equal(state.ending, null);
-  assert.ok(state.inventory.includes("pill"));
-  assert.ok(state.inventory.includes("blade"));
-  assert.ok(state.inventory.includes("acid_smear"));
-  assert.ok(state.inventory.includes("letter"));
+  for (const id of ["needle", "letter", "scale", "pill", "acid_smear", "blade"]) {
+    assert.ok(state.inventory.includes(id), id);
+  }
+  assert.equal(state.flags.needleReady, true);
+  assert.equal(state.flags.scaleReady, true);
+  assert.equal(state.flags.letterRead, false);
+  assert.deepEqual(state.sequences.bagua, ["zhen", "dui", "kan"]);
+  assert.deepEqual(state.sequences.sword, ["lineA", "lineB", "lineC", "lineD"]);
+  state = reduce(state, { type: "useItem", itemId: "letter" });
+  assert.equal(state.flags.letterOpen, true);
+  assert.equal(state.log[0], "letter.1");
+  state = reduce(state, { type: "advance" });
+  assert.equal(state.log[0], "letter.2");
+  state = reduce(state, { type: "advance" });
+  state = reduce(state, { type: "advance" });
+  assert.equal(state.log[0], "letter.4");
+  assert.equal(state.inventory.includes("needle"), true);
+  assert.equal(state.inventory.includes("scale"), true);
 });
 
 test("結局寫入後，再提交不會改結局", () => {

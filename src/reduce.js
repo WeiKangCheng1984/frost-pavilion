@@ -210,7 +210,7 @@ function inspect(state, target) {
     scroll: "brew.scroll",
     needle: "needle.inspect",
     scale: "scale.inspect",
-    letter: "letter.1",
+    letter: "letter.inspect",
     pill: "pill.inspect",
     acid_smear: "smear.inspect",
     blade: "blade.inspect",
@@ -222,7 +222,6 @@ function inspect(state, target) {
   if (itemTargets.includes(target) && !has(state, target)) return state;
   return {
     ...state,
-    flags: target === "letter" ? { ...state.flags, letterRead: true } : state.flags,
     log: [line]
   };
 }
@@ -401,8 +400,21 @@ function skipToFinale() {
     ...next,
     phase: 7,
     beat: "cheat",
-    inventory: ["letter", "pill", "acid_smear", "blade"],
-    flags: { ...next.flags, smearOffered: true, bladeOffered: true },
+    inventory: ["needle", "letter", "scale", "pill", "acid_smear", "blade"],
+    flags: {
+      ...next.flags,
+      needleReady: true,
+      scaleReady: true,
+      smearOffered: true,
+      bladeOffered: true
+    },
+    sequences: {
+      bagua: ["zhen", "dui", "kan"],
+      acupoint: ["qihai", "shanzhong", "jiuwei"],
+      wuxing: ["wood", "earth", "water", "fire"],
+      ko: ["take", "retake", "elsewhere", "fill"],
+      sword: ["lineA", "lineB", "lineC", "lineD"]
+    },
     timer: { remainingMs: timerMs, running: false, pausedByLetter: false, pausedByHidden: false },
     log: ["cheat.joke"]
   };
