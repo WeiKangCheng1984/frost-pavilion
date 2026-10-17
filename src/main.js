@@ -67,14 +67,17 @@ document.addEventListener("visibilitychange", () => {
 });
 
 function frame(now) {
-  if (!document.hidden && state.timer?.running) {
-    const delta = lastFrame === 0 ? 0 : Math.min(FRAME_CAP, now - lastFrame);
-    if (delta > 0) send({ type: "tick", ms: delta });
+  try {
+    if (!document.hidden && state.timer?.running) {
+      const delta = lastFrame === 0 ? 0 : Math.min(FRAME_CAP, now - lastFrame);
+      if (delta > 0) send({ type: "tick", ms: delta });
+    }
+    audio.sync(state, now);
+    paintFrame(state, now);
+  } finally {
+    lastFrame = now;
+    window.requestAnimationFrame(frame);
   }
-  audio.sync(state, now);
-  paintFrame(state, now);
-  lastFrame = now;
-  window.requestAnimationFrame(frame);
 }
 
 paintMute(audio.muted);

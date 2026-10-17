@@ -11,7 +11,7 @@ test("香進度四格隨剩餘時間切換", () => {
   assert.equal(fuseFrame(1000), "fuse_3");
 });
 
-test("結局觸發時會擋操作約兩秒", () => {
+test("結局觸發時會擋操作數秒", () => {
   resetAnim();
   setReducedMotion(false);
   const now = 1000;
@@ -25,7 +25,8 @@ test("結局觸發時會擋操作約兩秒", () => {
     timer: null
   }, now);
   assert.equal(animBusy(now + 100), true);
-  assert.equal(animBusy(now + 3000), false);
+  assert.equal(animBusy(now + 3000), true);
+  assert.equal(animBusy(now + 5600), false);
   const view = stageView({
     beat: "ending",
     phase: "ending",
@@ -34,6 +35,41 @@ test("結局觸發時會擋操作約兩秒", () => {
     flags: {},
     log: ["ending.wolf.unread.a"]
   }, now + 200);
+  assert.ok(view.center);
+  assert.ok(FRAME_NAMES.includes(view.center));
+});
+
+test("結局翻到空鏡頁會再播一段", () => {
+  resetAnim();
+  setReducedMotion(false);
+  const now = 1000;
+  syncAnim({
+    beat: "ending",
+    phase: "ending",
+    ending: "flee",
+    page: 0,
+    flags: {},
+    log: ["ending.flee.a"],
+    timer: null
+  }, now);
+  syncAnim({
+    beat: "ending",
+    phase: "ending",
+    ending: "flee",
+    page: 2,
+    flags: {},
+    log: ["ending.flee.c"],
+    timer: null
+  }, now + 6000);
+  assert.equal(animBusy(now + 6100), true);
+  const view = stageView({
+    beat: "ending",
+    phase: "ending",
+    ending: "flee",
+    page: 2,
+    flags: {},
+    log: ["ending.flee.c"]
+  }, now + 6200);
   assert.ok(view.center);
   assert.ok(FRAME_NAMES.includes(view.center));
 });
@@ -57,7 +93,9 @@ test("減少動態時不擋操作", () => {
 test("動畫影格都在精靈表裡", () => {
   const needed = [
     "door_0", "door_3", "fuse_0", "fuse_3", "fx_fire_0", "fx_gate_1",
-    "fx_ruin_0", "fx_ember", "fx_pill", "board_open", "bowl_aside", "sky"
+    "fx_ruin_0", "fx_ember", "fx_pill", "board_open", "bowl_aside", "sky",
+    "zhen", "dui", "kan", "needle", "bronze", "wood", "earth", "water", "fire",
+    "screen", "blade", "letter", "scroll", "chains", "xuelian", "pill", "elder"
   ];
   for (const name of needed) assert.ok(FRAME_NAMES.includes(name), name);
 });

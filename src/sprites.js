@@ -33,6 +33,10 @@ export function onSprites(fn) {
   else waiting.push(fn);
 }
 
+export function getSpriteSheet() {
+  return sheetReady ? sheet : null;
+}
+
 export function paintStage(canvas, scene, overlay = {}) {
   const ctx = canvas.getContext("2d");
   if (!ctx || !sheetReady) return;

@@ -297,8 +297,16 @@ h1 { font-size: 24px; }
 
 #close-letter,
 #debug-skip,
-#restart,
 .back { margin-top: 8px; }
+
+.ending-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ending-actions button { margin-top: 0; }
 
 .license h2 { margin-top: 16px; }
 

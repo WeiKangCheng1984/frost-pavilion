@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { drumAllowed, drumGap, MUTE_KEY, readMuted, writeMuted } from "../src/audio.js";
+import { createAudio, drumAllowed, drumGap, MUTE_KEY, readMuted, writeMuted } from "../src/audio.js";
 
 function memory() {
   const map = new Map();
@@ -46,4 +46,62 @@ test("靜音寫在自己的鍵，預設不靜音", () => {
   assert.equal(readMuted(storage), true);
   writeMuted(storage, false);
   assert.equal(readMuted(storage), false);
+});
+
+test("倒數開始且音訊已解鎖時，sync 打鼓不丟例外", () => {
+  class FakeParam {
+    setValueAtTime() {}
+    exponentialRampToValueAtTime() {}
+  }
+  class FakeNode {
+    connect() {
+      return this;
+    }
+    start() {}
+    stop() {}
+    frequency = new FakeParam();
+    gain = new FakeParam();
+  }
+  class FakeBuffer {
+    getChannelData() {
+      return new Float32Array(8);
+    }
+  }
+  class FakeAudioContext {
+    state = "running";
+    sampleRate = 44100;
+    currentTime = 0;
+    destination = new FakeNode();
+    createOscillator() {
+      return new FakeNode();
+    }
+    createGain() {
+      return new FakeNode();
+    }
+    createBuffer() {
+      return new FakeBuffer();
+    }
+    createBufferSource() {
+      return new FakeNode();
+    }
+    resume() {
+      return Promise.resolve();
+    }
+  }
+
+  const previous = globalThis.AudioContext;
+  const previousDocument = globalThis.document;
+  globalThis.AudioContext = FakeAudioContext;
+  globalThis.document = {
+    documentElement: { dataset: {} }
+  };
+  try {
+    const audio = createAudio(memory());
+    audio.unlock();
+    assert.doesNotThrow(() => audio.sync(running, 1));
+    assert.doesNotThrow(() => audio.playCue("door"));
+  } finally {
+    globalThis.AudioContext = previous;
+    globalThis.document = previousDocument;
+  }
 });

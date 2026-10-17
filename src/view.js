@@ -2,7 +2,8 @@ import { acupoints, elements, endingNames, herbs, hints, items, koMoves, lines, 
 import { endingKickerId, endingPageIds } from "./endings.js";
 import { glanceOpen } from "./reduce.js";
 import { animBusy, setReducedMotion, stageView, syncAnim } from "./anim.js";
-import { loadSprites, onSprites, paintStage } from "./sprites.js";
+import { downloadEndingCard } from "./card.js";
+import { getSpriteSheet, loadSprites, onSprites, paintStage } from "./sprites.js";
 
 const PHASES = {
   1: { kicker: "第一關", block: "八卦壁" },
@@ -287,29 +288,31 @@ function paintChrome() {
 }
 
 function paintRestart(state, ended) {
-  const button = document.querySelector("#restart");
-  if (!button) return;
+  const wrap = document.querySelector("#ending-actions");
+  const restart = document.querySelector("#restart");
+  const saveCard = document.querySelector("#save-card");
+  if (!wrap || !restart || !saveCard) return;
   if (!ended) {
     window.clearTimeout(restartDelayTimer);
     restartDelayKey = "";
-    button.hidden = true;
+    wrap.hidden = true;
     return;
   }
   const ids = endingPageIds(state.ending, state);
   const onLast = state.page >= ids.length - 1;
   const key = `${state.ending}:${state.page}:${speech.done}`;
   if (!onLast || !speech.done) {
-    button.hidden = true;
+    wrap.hidden = true;
     return;
   }
   if (restartDelayKey === key) return;
   restartDelayKey = key;
   window.clearTimeout(restartDelayTimer);
-  button.hidden = true;
+  wrap.hidden = true;
   const delay = reducedMotion ? 0 : 1200;
   restartDelayTimer = window.setTimeout(() => {
     if (latest?.state?.ending === state.ending && latest.state.page === state.page) {
-      button.hidden = false;
+      wrap.hidden = false;
     }
   }, delay);
 }
@@ -690,6 +693,16 @@ function bindStatic() {
   document.querySelector("#restart").addEventListener("click", () => {
     focus = null;
     latest?.send({ type: "restart" });
+  });
+  document.querySelector("#save-card").addEventListener("click", async () => {
+    if (!latest?.state?.ending) return;
+    const button = document.querySelector("#save-card");
+    button.disabled = true;
+    try {
+      await downloadEndingCard(latest.state, getSpriteSheet());
+    } finally {
+      button.disabled = false;
+    }
   });
   document.querySelector("#submit").addEventListener("click", () => {
     if (!latest || document.querySelector("#submit").disabled) return;

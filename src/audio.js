@@ -45,10 +45,10 @@ export function createAudio(storage = localStorage) {
   }
 
   function hit(audio) {
-    tone(audio, { freq: 78, end: 46, dur: 0.1, vol: 0.22, noise: true });
+    tone(audio, { freq: 78, end: 46, dur: 0.1, vol: 0.22, burst: true });
   }
 
-  function tone(audio, { freq, end = freq, dur = 0.1, vol = 0.18, noise = false, type = "sine" }) {
+  function tone(audio, { freq, end = freq, dur = 0.1, vol = 0.18, burst = false, type = "sine" }) {
     if (!audio || audio.state !== "running") return;
     const now = audio.currentTime;
     const osc = audio.createOscillator();
@@ -63,7 +63,7 @@ export function createAudio(storage = localStorage) {
     gain.connect(audio.destination);
     osc.start(now);
     osc.stop(now + dur + 0.02);
-    if (noise && burst) {
+    if (burst && noise) {
       const src = audio.createBufferSource();
       src.buffer = noise;
       const bg = audio.createGain();
