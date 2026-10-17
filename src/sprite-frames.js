@@ -1,0 +1,46 @@
+export const CELL = 16;
+export const COLUMNS = 16;
+export const SCALE = 6;
+export const DETAIL = 4;
+
+export const FRAME_NAMES = [
+  "brick",
+  "wall",
+  "bronze",
+  "tiles",
+  "board",
+  "shelf",
+  "screen",
+  "elder",
+  "qinglong",
+  "baihu",
+  "fuse",
+  "bowl",
+  "scroll",
+  "compass",
+  "poem",
+  "chains",
+  "needle",
+  "letter",
+  "scale",
+  "pill",
+  "smear",
+  "blade",
+  "hongre",
+  "hanyin",
+  "xuelian",
+  "qingre",
+  "metal",
+  "wood",
+  "water",
+  "fire",
+  "earth",
+  "qian",
+  "dui",
+  "li",
+  "zhen",
+  "xun",
+  "kan",
+  "gen",
+  "kun"
+];
