@@ -2,11 +2,12 @@ import { endingNames, items } from "./content.js";
 
 export const SAVE_KEY = "frost-pavilion";
 
-const VERSION = 1;
+const VERSION = 2;
 const ITEM_IDS = new Set(Object.keys(items));
 const ENDINGS = new Set(Object.keys(endingNames));
 const SWORD_IDS = ["lineA", "lineB", "lineC", "lineD"];
-const FLAG_KEYS = ["letterRead", "smearOffered", "pillPlaced", "chainsFreed", "introDone", "bladeOffered"];
+const FLAG_KEYS = ["letterRead", "smearOffered", "pillPlaced", "chainsFreed", "introDone", "bladeOffered", "letterOpen"];
+const BEATS = new Set(["prologue", "enter", "play", "clear", "offer"]);
 
 export function loadSave(storage) {
   let raw;
@@ -53,6 +54,8 @@ function validState(data) {
   if (!Array.isArray(data.inventory)) return false;
   if (new Set(data.inventory).size !== data.inventory.length) return false;
   if (data.inventory.some((id) => !ITEM_IDS.has(id))) return false;
+  if (!BEATS.has(data.beat)) return false;
+  if (!Number.isInteger(data.page) || data.page < 0) return false;
   if (!data.flags || FLAG_KEYS.some((key) => typeof data.flags[key] !== "boolean")) return false;
   if (!validSequences(data.sequences)) return false;
   if (!validTimer(data.timer, data.phase)) return false;

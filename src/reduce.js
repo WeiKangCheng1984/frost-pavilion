@@ -1,12 +1,14 @@
-import { brew, puzzles, sword, timerMs } from "./content.js";
+import { brew, passages, puzzles, sword, timerMs } from "./content.js";
 import { endingLineId, resolveEnding } from "./endings.js";
 
 const SWORD_IDS = ["lineA", "lineB", "lineC", "lineD"];
 
 export function initialState() {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     phase: 1,
+    beat: "prologue",
+    page: 0,
     inventory: [],
     flags: {
       letterRead: false,
@@ -14,7 +16,8 @@ export function initialState() {
       pillPlaced: false,
       chainsFreed: false,
       introDone: false,
-      bladeOffered: false
+      bladeOffered: false,
+      letterOpen: false
     },
     sequences: {
       bagua: [],
@@ -24,7 +27,7 @@ export function initialState() {
     },
     timer: null,
     ending: null,
-    log: ["bagua.intro"]
+    log: [passages.prologue[0]]
   };
 }
 
@@ -35,6 +38,8 @@ export function reduce(state, action) {
   switch (action.type) {
     case "inspect":
       return inspect(state, action.target);
+    case "advance":
+      return advance(state);
     case "sequencePush":
       return sequencePush(state, action.puzzleId, action.token);
     case "sequenceReorder":
@@ -55,8 +60,6 @@ export function reduce(state, action) {
       return conceal(state);
     case "reveal":
       return reveal(state);
-    case "skipIntro":
-      return skipIntro(state);
     case "tick":
       return tick(state, action.ms);
     case "restart":
@@ -82,7 +85,63 @@ function gainAll(inventory, ids) {
   return ids.reduce(gain, inventory);
 }
 
+function playing(state) {
+  return state.beat === "play" && !state.flags.letterOpen;
+}
+
+function pageIds(state) {
+  if (state.flags.letterOpen) return passages.letter;
+  if (state.beat === "prologue") return passages.prologue;
+  if (state.beat === "enter") return passages.enter[state.phase];
+  if (state.beat === "clear") return passages.clear[state.phase];
+  return null;
+}
+
+function beginEnter(state, phase) {
+  return {
+    ...state,
+    phase,
+    beat: "enter",
+    page: 0,
+    log: [passages.enter[phase][0]]
+  };
+}
+
+function advance(state) {
+  const ids = pageIds(state);
+  if (!ids) return state;
+  if (state.page < ids.length - 1) {
+    const page = state.page + 1;
+    return { ...state, page, log: [ids[page]] };
+  }
+  if (state.flags.letterOpen) return closeLetter(state);
+  return finishPassage(state);
+}
+
+function finishPassage(state) {
+  if (state.beat === "prologue") return beginEnter(state, 1);
+  if (state.beat === "enter" && state.phase === 7) {
+    return {
+      ...state,
+      beat: "play",
+      page: 0,
+      flags: { ...state.flags, introDone: true },
+      timer: {
+        ...state.timer,
+        running: !state.timer.pausedByLetter && !state.timer.pausedByHidden
+      }
+    };
+  }
+  if (state.beat === "enter") return { ...state, beat: "play", page: 0 };
+  if (state.beat !== "clear") return state;
+  if (state.phase === 5) return { ...state, beat: "offer", page: 0, log: ["brew.askSmear"] };
+  if (state.phase === 6) return { ...state, beat: "offer", page: 0, log: ["blade.ask"] };
+  return beginEnter(state, state.phase + 1);
+}
+
 function inspect(state, target) {
+  if (!playing(state)) return state;
+  if (target === "letter") return openLetter(state);
   const table = {
     compass: "compass.inspect",
     poem: "bagua.poem",
@@ -93,7 +152,7 @@ function inspect(state, target) {
     scroll: "brew.scroll",
     needle: "needle.inspect",
     scale: "scale.inspect",
-    letter: "letter.body",
+    letter: "letter.1",
     pill: "pill.inspect",
     acid_smear: "smear.inspect",
     blade: "blade.inspect"
@@ -111,7 +170,7 @@ function inspect(state, target) {
 
 function sequencePush(state, puzzleId, token) {
   const puzzle = puzzles[puzzleId];
-  if (!puzzle || !puzzle.answer || state.phase !== puzzle.phase) return state;
+  if (!playing(state) || !puzzle || !puzzle.answer || state.phase !== puzzle.phase) return state;
   if (puzzle.requires?.some((id) => !has(state, id))) {
     return { ...state, log: [puzzle.blockedLine] };
   }
@@ -134,15 +193,16 @@ function sequencePush(state, puzzleId, token) {
   }
   return {
     ...state,
-    phase: state.phase + 1,
+    beat: "clear",
+    page: 0,
     inventory: gainAll(state.inventory, puzzle.grant),
     sequences: { ...state.sequences, [puzzleId]: next },
-    log: [puzzle.successLine]
+    log: [passages.clear[state.phase][0]]
   };
 }
 
 function sequenceReorder(state, order) {
-  if (state.phase !== sword.phase || !isSwordOrder(order)) return state;
+  if (!playing(state) || state.phase !== sword.phase || !isSwordOrder(order)) return state;
   return {
     ...state,
     sequences: { ...state.sequences, sword: [...order] }
@@ -165,13 +225,14 @@ function submit(state, action) {
 
 function submitKo(state, choice) {
   const puzzle = puzzles.ko;
-  if (state.phase !== puzzle.phase) return state;
+  if (!playing(state) || state.phase !== puzzle.phase) return state;
   if (choice !== puzzle.answer) return { ...state, log: [puzzle.failLine] };
   return {
     ...state,
-    phase: state.phase + 1,
+    beat: "clear",
+    page: 0,
     inventory: gainAll(state.inventory, puzzle.grant),
-    log: [puzzle.successLine]
+    log: [passages.clear[state.phase][0]]
   };
 }
 
@@ -184,7 +245,7 @@ function brewOk(input) {
 }
 
 function submitBrew(state, recipe) {
-  if (state.phase !== brew.phase) return state;
+  if (!playing(state) || state.phase !== brew.phase) return state;
   if (brew.requires.some((id) => !has(state, id))) {
     return { ...state, log: [brew.blockedLine] };
   }
@@ -192,14 +253,15 @@ function submitBrew(state, recipe) {
   const inventory = recipe.setAsideSnow ? gain(state.inventory, "pill") : state.inventory;
   return {
     ...state,
-    phase: state.phase + 1,
+    beat: "clear",
+    page: 0,
     inventory,
-    log: [brew.successLine, brew.askLine]
+    log: [passages.clear[state.phase][0]]
   };
 }
 
 function submitSword(state) {
-  if (state.phase !== sword.phase) return state;
+  if (!playing(state) || state.phase !== sword.phase) return state;
   const correct = sword.answer.every((id, index) => state.sequences.sword[index] === id);
   if (!correct) {
     return {
@@ -210,9 +272,9 @@ function submitSword(state) {
   }
   return {
     ...state,
-    phase: state.phase + 1,
-    timer: { remainingMs: timerMs, running: false, pausedByLetter: false, pausedByHidden: false },
-    log: [sword.successLine, "blade.ask"]
+    beat: "clear",
+    page: 0,
+    log: [passages.clear[state.phase][0]]
   };
 }
 
@@ -231,23 +293,22 @@ function offerAnswer(state, offer, answer) {
 }
 
 function answerSmear(state, answer) {
-  if (state.phase !== 6 || state.flags.smearOffered) return state;
-  return {
+  if (state.phase !== 5 || state.beat !== "offer" || state.flags.smearOffered) return state;
+  return beginEnter({
     ...state,
     inventory: answer === "yes" ? gain(state.inventory, "acid_smear") : state.inventory,
-    flags: { ...state.flags, smearOffered: true },
-    log: [answer === "yes" ? "brew.smearYes" : "brew.smearNo"]
-  };
+    flags: { ...state.flags, smearOffered: true }
+  }, 6);
 }
 
 function answerBlade(state, answer) {
-  if (state.phase !== 7 || state.flags.bladeOffered) return state;
-  return {
+  if (state.phase !== 6 || state.beat !== "offer" || state.flags.bladeOffered) return state;
+  return beginEnter({
     ...state,
     inventory: answer === "yes" ? gain(state.inventory, "blade") : state.inventory,
     flags: { ...state.flags, bladeOffered: true },
-    log: ["ending.intro"]
-  };
+    timer: { remainingMs: timerMs, running: false, pausedByLetter: false, pausedByHidden: false }
+  }, 7);
 }
 
 function placePill(state) {
@@ -271,11 +332,12 @@ function freeChains(state) {
 }
 
 function openLetter(state) {
-  if (!has(state, "letter")) return state;
+  if (!playing(state) || !has(state, "letter")) return state;
   const next = {
     ...state,
-    flags: { ...state.flags, letterRead: true },
-    log: ["letter.body"]
+    page: 0,
+    log: [passages.letter[0]],
+    flags: { ...state.flags, letterRead: true, letterOpen: true }
   };
   if (!state.timer) return next;
   return {
@@ -285,15 +347,21 @@ function openLetter(state) {
 }
 
 function closeLetter(state) {
-  if (!state.timer?.pausedByLetter) return state;
-  return {
+  if (!state.flags.letterOpen) return state;
+  const next = {
     ...state,
+    page: 0,
+    log: ["letter.closed"],
+    flags: { ...state.flags, letterOpen: false }
+  };
+  if (!state.timer) return next;
+  return {
+    ...next,
     timer: {
       ...state.timer,
       pausedByLetter: false,
       running: state.flags.introDone && !state.timer.pausedByHidden
-    },
-    log: [state.flags.introDone ? "letter.closed" : "ending.intro"]
+    }
   };
 }
 
@@ -313,18 +381,6 @@ function reveal(state) {
       ...state.timer,
       pausedByHidden: false,
       running: state.flags.introDone && !state.timer.pausedByLetter
-    }
-  };
-}
-
-function skipIntro(state) {
-  if (state.phase !== 7 || state.flags.introDone || !state.timer) return state;
-  return {
-    ...state,
-    flags: { ...state.flags, introDone: true },
-    timer: {
-      ...state.timer,
-      running: !state.timer.pausedByLetter && !state.timer.pausedByHidden
     }
   };
 }
