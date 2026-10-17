@@ -1,6 +1,7 @@
 import { acupoints, elements, endingNames, herbs, hints, items, koMoves, lines, passages, trigrams, verses } from "./content.js";
 import { endingKickerId, endingPageIds } from "./endings.js";
 import { glanceOpen } from "./reduce.js";
+import { animBusy, setReducedMotion, stageView, syncAnim } from "./anim.js";
 import { loadSprites, onSprites, paintStage } from "./sprites.js";
 
 const PHASES = {
@@ -36,6 +37,7 @@ const LABELS = Object.fromEntries([
 
 const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 let reducedMotion = motionQuery.matches;
+setReducedMotion(reducedMotion);
 const debug = new URLSearchParams(location.search).has("debug");
 
 let latest = null;
@@ -48,6 +50,7 @@ let focus = null;
 let selected = null;
 let restartDelayTimer = 0;
 let restartDelayKey = "";
+let wasAnimBusy = false;
 
 const TARGET_FRAMES = {
   compass: "compass",
@@ -111,6 +114,21 @@ export function render(state, send) {
   }
   paintSpeech();
   paintTimer(state);
+  paintScene(state);
+}
+
+export function paintFrame(state, now = performance.now()) {
+  if (latest) latest.state = state;
+  syncAnim(state, now);
+  paintScene(state, now);
+  const busy = animBusy(now);
+  if (busy !== wasAnimBusy) {
+    wasAnimBusy = busy;
+    chromeKey = "";
+    if (latest) paintChrome();
+  }
+  paintAdvance();
+  paintRetreat();
 }
 
 function emptyBrew() {
@@ -190,6 +208,7 @@ function paintSpeech() {
 }
 
 function passageLabel(state) {
+  if (animBusy()) return "";
   if (glanceOpen(state) && state.phase === 7 && state.beat === "play" && !state.flags.letterOpen) {
     return "繼續";
   }
@@ -251,7 +270,7 @@ function paintChrome() {
   document.querySelector("#hint").hidden = ended;
   paintRestart(state, ended);
   const use = document.querySelector("#use");
-  if (use) use.disabled = !inPlay || Boolean(state.pending) || glanceOpen(state);
+  if (use) use.disabled = !inPlay || Boolean(state.pending) || glanceOpen(state) || animBusy();
   document.querySelector("#close-letter").hidden = true;
   document.querySelector("#debug-skip").hidden = !debug || ended || !state.timer?.running;
 
@@ -337,10 +356,15 @@ function sceneFor(state) {
   return { center: "wall", row: [] };
 }
 
-function paintScene(state) {
+function paintScene(state, now = performance.now()) {
   const canvas = document.querySelector("#scene");
   if (!canvas || !state) return;
-  paintStage(canvas, sceneFor(state));
+  const base = sceneFor(state);
+  const overlay = stageView(state, now);
+  paintStage(canvas, {
+    center: overlay.center || base.center,
+    row: overlay.row ?? base.row
+  }, overlay);
 }
 
 function progressText(state) {
@@ -572,7 +596,7 @@ function paintOffer(parent, offer, yesLabel, noLabel, send) {
 }
 
 function paintFinale(parent, state, send) {
-  if (glanceOpen(state)) return;
+  if (glanceOpen(state) || animBusy()) return;
   if (state.pending) {
     paintOffer(parent, "finale", "就這樣", "先不", send);
     return;
@@ -683,6 +707,7 @@ for (let i = 0; i < 10; i += 1) timerBar.append(document.createElement("span"));
 
 motionQuery.addEventListener("change", () => {
   reducedMotion = motionQuery.matches;
+  setReducedMotion(reducedMotion);
   if (reducedMotion && !speech.done) finishSpeech();
 });
 

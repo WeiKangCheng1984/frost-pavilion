@@ -1,15 +1,19 @@
+import { onAnimSound, setReducedMotion } from "./anim.js";
 import { createAudio } from "./audio.js";
 import { initialState, reduce } from "./reduce.js";
 import { applyScale, mountScale } from "./scale.js";
 import { mountTextSize } from "./textSize.js";
 import { loadSave, writeSave } from "./save.js";
-import { paintMute, render } from "./view.js";
+import { paintFrame, paintMute, render } from "./view.js";
 
 const FRAME_CAP = 250;
 
 const audio = createAudio();
 let state = loadSave(sessionStorage) ?? initialState();
 let lastFrame = 0;
+
+onAnimSound((name) => audio.playCue(name));
+setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
 function send(action) {
   const next = reduce(state, action);
@@ -52,6 +56,7 @@ function frame(now) {
     if (delta > 0) send({ type: "tick", ms: delta });
   }
   audio.sync(state, now);
+  paintFrame(state, now);
   lastFrame = now;
   window.requestAnimationFrame(frame);
 }

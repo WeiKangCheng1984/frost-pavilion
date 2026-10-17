@@ -6,6 +6,7 @@
     "start": "node dev-server.js",
     "test": "node --test",
     "build": "node --test",
-    "sync-copy": "node scripts/sync-content.mjs"
+    "sync-copy": "node scripts/sync-content.mjs",
+    "sprites": "node assets/paint-sprites.mjs"
   }
 }
