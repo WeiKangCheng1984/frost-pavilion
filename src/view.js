@@ -1,7 +1,7 @@
 import { acupoints, elements, endingNames, herbs, hints, items, koMoves, lines, passages, trigrams, verses } from "./content.js";
 import { endingKickerId, endingPageIds } from "./endings.js";
 import { glanceOpen } from "./reduce.js";
-import { animBusy, setReducedMotion, stageView, syncAnim } from "./anim.js";
+import { animBusy, noteInspect, setReducedMotion, stageView, syncAnim } from "./anim.js";
 import { prepareEndingCard, releasePreparedCard, savePreparedCard } from "./card.js";
 import { getSpriteSheet, loadSprites, onSprites, paintStage } from "./sprites.js";
 
@@ -477,6 +477,7 @@ function paintInspect(state, send) {
     button.addEventListener("click", () => {
       focus = item.target;
       send({ type: "inspect", target: item.target });
+      noteInspect(item.target);
       paintScene(latest.state);
     });
     panel.append(button);
@@ -665,11 +666,13 @@ function bindStatic() {
     if (selected) {
       focus = selected;
       latest.send({ type: "inspect", target: selected });
+      noteInspect(selected);
       return;
     }
     const targets = INSPECTS[latest.state.phase] ?? [];
     if (targets.length === 0) {
       latest.send({ type: "inspect", target: "barren" });
+      noteInspect("barren");
       return;
     }
     inspectOpen = !inspectOpen;

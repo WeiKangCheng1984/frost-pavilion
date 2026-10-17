@@ -1,99 +1,393 @@
-/** 呈現層動畫。不改謎題答案，只決定畫面與短暫擋操作。 */
+/** 呈現層動畫：主 B 分鏡；結局 C 香／定格；調查窺閣；關卡轉換。 */
 
 const FULL_MS = 60000;
 
+/** beats: 起→轉→收。每拍可帶 center／row／mood。 */
 const CLIPS = {
   door: {
-    frames: ["door_0", "door_1", "door_2", "door_3", "door_3", "door_2", "wall"],
-    ms: 3800,
-    sound: "door"
+    sound: "door",
+    beats: [
+      { center: "door_0", mood: null, ms: 700 },
+      { center: "door_2", mood: null, ms: 900 },
+      { center: "wall", mood: "ash", ms: 1100 }
+    ]
   },
   wolf: {
-    frames: ["fx_fire_0", "fx_fire_1", "fx_fire_0", "fx_fire_1", "baihu", "fx_fire_0", "baihu", "fx_fire_1"],
-    ms: 5200,
     sound: "fire",
-    shake: true
+    shake: true,
+    beats: [
+      { center: "fx_fire_0", row: [], mood: "ember", ms: 900 },
+      { center: "baihu", row: ["fx_fire_1"], mood: "ember", ms: 1400 },
+      { center: "baihu", row: [], mood: "void", ms: 1800 }
+    ]
   },
   flee: {
-    frames: ["fx_gate_0", "fx_gate_1", "qinglong", "fx_gate_1", "qinglong", "fx_gate_0", "qinglong"],
-    ms: 4800,
-    sound: "gate"
+    sound: "gate",
+    beats: [
+      { center: "fx_gate_0", row: [], mood: "mist", ms: 900 },
+      { center: "qinglong", row: ["fx_gate_1"], mood: "mist", ms: 1300 },
+      { center: "qinglong", row: [], mood: "cool", ms: 1600 }
+    ]
   },
   sever: {
-    frames: ["fx_pill", "pill", "elder", "pill", "elder", "fx_pill", "elder"],
-    ms: 4600,
-    sound: "soft"
+    sound: "soft",
+    beats: [
+      { center: "fx_pill", row: [], mood: "cool", ms: 800 },
+      { center: "pill", row: ["elder"], mood: "cool", ms: 1400 },
+      { center: "elder", row: ["pill"], mood: "void", ms: 1600 }
+    ]
   },
   ember: {
-    frames: ["fx_ember", "chains", "elder", "qinglong", "elder", "qinglong", "fx_ember"],
-    ms: 5200,
-    sound: "chain"
+    sound: "chain",
+    beats: [
+      { center: "fx_ember", row: ["chains"], mood: "dawn", ms: 900 },
+      { center: "elder", row: ["qinglong"], mood: "dawn", ms: 1400 },
+      { center: "elder", row: ["qinglong"], mood: "mist", ms: 1700 }
+    ]
   },
   buried: {
-    frames: ["fuse_3", "fuse_2", "fx_ruin_0", "fx_ruin_1", "fx_ruin_0", "fx_ruin_1", "sky"],
-    ms: 5600,
     sound: "ruin",
-    shake: true
+    shake: true,
+    beats: [
+      { center: "fuse_2", row: [], mood: "ash", ms: 1000 },
+      { center: "fx_ruin_0", row: ["fuse_3"], mood: "void", ms: 1400 },
+      { center: "sky", row: [], mood: "void", ms: 2000 }
+    ]
   },
-  wolfSky: { frames: ["baihu", "sky", "sky", "baihu", "sky"], ms: 3400, sound: "soft" },
-  fleeSky: { frames: ["qinglong", "sky", "sky", "qinglong", "sky"], ms: 3400, sound: "soft" },
-  severSky: { frames: ["elder", "sky", "pill", "sky"], ms: 3200, sound: "soft" },
-  emberSky: { frames: ["elder", "qinglong", "sky", "sky"], ms: 3400, sound: "soft" },
-  buriedSky: { frames: ["fx_ruin_1", "sky", "sky", "fuse_3"], ms: 3600, sound: "fuse" },
+  wolfSky: {
+    sound: "soft",
+    beats: [
+      { center: "baihu", row: [], mood: "void", ms: 800 },
+      { center: "sky", row: [], mood: "void", ms: 2200 }
+    ]
+  },
+  fleeSky: {
+    sound: "soft",
+    beats: [
+      { center: "qinglong", row: [], mood: "void", ms: 800 },
+      { center: "sky", row: [], mood: "void", ms: 2200 }
+    ]
+  },
+  severSky: {
+    sound: "soft",
+    beats: [
+      { center: "pill", row: ["elder"], mood: "void", ms: 800 },
+      { center: "sky", row: [], mood: "void", ms: 2200 }
+    ]
+  },
+  emberSky: {
+    sound: "soft",
+    beats: [
+      { center: "elder", row: ["qinglong"], mood: "void", ms: 900 },
+      { center: "sky", row: [], mood: "void", ms: 2200 }
+    ]
+  },
+  buriedSky: {
+    sound: "fuse",
+    beats: [
+      { center: "fuse_3", row: [], mood: "void", ms: 900 },
+      { center: "sky", row: [], mood: "void", ms: 2400 }
+    ]
+  },
+
+  // —— 進關 ——
+  enter1: {
+    sound: "door",
+    beats: [
+      { center: "door_1", row: [], mood: "ash", ms: 700 },
+      { center: "wall", row: ["compass"], mood: null, ms: 1000 },
+      { center: "wall", row: ["poem"], mood: "cool", ms: 1000 }
+    ]
+  },
+  enter2: {
+    sound: "soft",
+    beats: [
+      { center: "wall", row: ["needle"], mood: null, ms: 700 },
+      { center: "bronze", row: [], mood: null, ms: 1100 },
+      { center: "bronze", row: ["needle"], mood: "cool", ms: 1000 }
+    ]
+  },
+  enter3: {
+    sound: "soft",
+    beats: [
+      { center: "bronze", row: [], mood: "ash", ms: 600 },
+      { center: "tiles", row: ["wood", "earth"], mood: null, ms: 1000 },
+      { center: "tiles", row: ["water", "fire"], mood: "dawn", ms: 1000 }
+    ]
+  },
+  enter4: {
+    sound: "wood",
+    beats: [
+      { center: "tiles", row: [], mood: null, ms: 600 },
+      { center: "board", row: [], mood: null, ms: 1100 },
+      { center: "board", row: [], mood: "cool", ms: 900 }
+    ]
+  },
+  enter5: {
+    sound: "soft",
+    beats: [
+      { center: "board", row: ["letter", "scale"], mood: null, ms: 700 },
+      { center: "shelf", row: [], mood: null, ms: 1100 },
+      { center: "shelf", row: ["scroll"], mood: "dawn", ms: 1000 }
+    ]
+  },
+  enter6: {
+    sound: "door",
+    beats: [
+      { center: "bowl", row: [], mood: "ash", ms: 700 },
+      { center: "screen", row: [], mood: null, ms: 1100 },
+      { center: "screen", row: ["blade"], mood: "mist", ms: 1100 }
+    ]
+  },
+  enter7: {
+    sound: "soft",
+    beats: [
+      { center: "door_2", row: [], mood: "ash", ms: 800 },
+      { center: "elder", row: ["chains"], mood: "ash", ms: 1200 },
+      { center: "elder", row: ["baihu", "qinglong"], mood: "void", ms: 1300 }
+    ]
+  },
+
+  // —— 過關 ——
+  clear1: {
+    sound: "soft",
+    beats: [
+      { center: "wall", row: ["zhen", "dui", "kan"], mood: null, ms: 700 },
+      { center: "door_0", row: ["needle"], mood: "dawn", ms: 1100 },
+      { center: "wall", row: ["needle"], mood: null, ms: 900 }
+    ]
+  },
+  clear2: {
+    sound: "needle",
+    beats: [
+      { center: "bronze", row: ["needle"], mood: null, ms: 700 },
+      { center: "bronze", row: [], mood: "cool", ms: 1000 },
+      { center: "tiles", row: [], mood: "ash", ms: 1000 }
+    ]
+  },
+  clear3: {
+    sound: "soft",
+    beats: [
+      { center: "tiles", row: ["wood", "earth", "water", "fire"], mood: "dawn", ms: 800 },
+      { center: "tiles", row: ["metal"], mood: "ember", ms: 900 },
+      { center: "board", row: [], mood: null, ms: 1000 }
+    ]
+  },
   board: {
-    frames: ["board", "board", "board_open", "letter", "board_open", "letter", "board_open"],
-    ms: 4000,
-    sound: "wood"
+    sound: "wood",
+    beats: [
+      { center: "board", row: [], mood: null, ms: 700 },
+      { center: "board_open", row: ["letter"], mood: null, ms: 1200 },
+      { center: "letter", row: ["scale"], mood: "dawn", ms: 1100 }
+    ]
   },
   brew: {
-    frames: ["bowl_aside", "xuelian", "pill", "bowl_aside", "pill", "bowl"],
-    ms: 4000,
-    sound: "soft"
+    sound: "soft",
+    beats: [
+      { center: "bowl_aside", row: ["xuelian"], mood: null, ms: 800 },
+      { center: "pill", row: ["bowl_aside"], mood: "dawn", ms: 1100 },
+      { center: "bowl", row: ["pill"], mood: null, ms: 1000 }
+    ]
   },
   brewNone: {
-    frames: ["bowl", "bowl", "bowl_aside", "bowl", "bowl"],
-    ms: 3200,
-    sound: "crack"
+    sound: "crack",
+    beats: [
+      { center: "bowl", row: [], mood: null, ms: 700 },
+      { center: "bowl_aside", row: [], mood: "ash", ms: 900 },
+      { center: "bowl", row: [], mood: "ash", ms: 900 }
+    ]
   },
-  cheat: {
-    frames: ["wall", "door_0", "wall", "door_1", "door_0", "wall", "door_0"],
-    ms: 3600,
-    sound: "joke"
+  clear6: {
+    sound: "door",
+    beats: [
+      { center: "screen", row: [], mood: null, ms: 700 },
+      { center: "door_1", row: ["blade"], mood: "mist", ms: 1200 },
+      { center: "door_3", row: ["fuse_0"], mood: "ash", ms: 1200 }
+    ]
   },
+
+  // —— 解謎成功（短慶祝）——
   bagua: {
-    frames: ["wall", "zhen", "dui", "kan", "door_0", "door_1", "wall"],
-    ms: 3400,
-    sound: "soft"
+    sound: "soft",
+    beats: [
+      { center: "wall", row: ["zhen", "dui", "kan"], mood: null, ms: 700 },
+      { center: "door_0", row: ["zhen", "dui", "kan"], mood: null, ms: 900 },
+      { center: "wall", row: ["needle"], mood: "dawn", ms: 900 }
+    ]
   },
   needle: {
-    frames: ["bronze", "needle", "bronze", "needle", "bronze", "needle"],
-    ms: 3200,
-    sound: "needle"
+    sound: "needle",
+    beats: [
+      { center: "bronze", row: [], mood: null, ms: 600 },
+      { center: "bronze", row: ["needle"], mood: null, ms: 1000 },
+      { center: "bronze", row: ["needle"], mood: "cool", ms: 900 }
+    ]
   },
   wuxing: {
-    frames: ["tiles", "wood", "earth", "water", "fire", "tiles"],
-    ms: 3400,
-    sound: "soft"
+    sound: "soft",
+    beats: [
+      { center: "tiles", row: ["wood", "earth"], mood: null, ms: 700 },
+      { center: "tiles", row: ["water", "fire"], mood: null, ms: 900 },
+      { center: "tiles", row: ["wood", "earth", "water", "fire"], mood: "dawn", ms: 900 }
+    ]
   },
   sword: {
-    frames: ["screen", "blade", "screen", "door_0", "door_1", "screen"],
-    ms: 3600,
-    sound: "soft"
+    sound: "soft",
+    beats: [
+      { center: "screen", row: [], mood: null, ms: 700 },
+      { center: "screen", row: ["blade"], mood: null, ms: 1000 },
+      { center: "door_1", row: ["blade"], mood: "mist", ms: 1100 }
+    ]
   },
   letter: {
-    frames: ["letter", "scroll", "letter", "scroll", "letter"],
-    ms: 2800,
-    sound: "wood"
+    sound: "wood",
+    beats: [
+      { center: "letter", row: [], mood: null, ms: 600 },
+      { center: "scroll", row: ["letter"], mood: "cool", ms: 900 },
+      { center: "letter", row: [], mood: "cool", ms: 800 }
+    ]
   },
   chain: {
-    frames: ["chains", "fx_ember", "chains", "elder", "chains"],
-    ms: 3000,
-    sound: "chain"
+    sound: "chain",
+    beats: [
+      { center: "chains", row: [], mood: null, ms: 600 },
+      { center: "fx_ember", row: ["chains"], mood: "dawn", ms: 1000 },
+      { center: "elder", row: [], mood: "dawn", ms: 900 }
+    ]
   },
   placePill: {
-    frames: ["pill", "elder", "pill", "elder"],
-    ms: 2600,
-    sound: "soft"
+    sound: "soft",
+    beats: [
+      { center: "pill", row: [], mood: null, ms: 600 },
+      { center: "elder", row: ["pill"], mood: "cool", ms: 1000 },
+      { center: "elder", row: ["pill"], mood: "cool", ms: 900 }
+    ]
+  },
+  cheat: {
+    sound: "joke",
+    beats: [
+      { center: "wall", row: [], mood: null, ms: 600 },
+      { center: "door_0", row: [], mood: null, ms: 900 },
+      { center: "wall", row: ["door_1"], mood: "dawn", ms: 1000 }
+    ]
+  },
+
+  // —— 調查：窺閣一眼（場景三拍／道具二拍）——
+  lookCompass: {
+    sound: "soft",
+    beats: [
+      { center: "wall", row: [], mood: null, ms: 600 },
+      { center: "compass", row: [], mood: "dawn", ms: 1100 },
+      { center: "wall", row: ["compass"], mood: "cool", ms: 900 }
+    ]
+  },
+  lookPoem: {
+    sound: "soft",
+    beats: [
+      { center: "wall", row: [], mood: "ash", ms: 600 },
+      { center: "poem", row: [], mood: "cool", ms: 1200 },
+      { center: "wall", row: ["poem"], mood: "ash", ms: 900 }
+    ]
+  },
+  lookBronze: {
+    sound: "needle",
+    beats: [
+      { center: "bronze", row: [], mood: null, ms: 700 },
+      { center: "bronze", row: ["needle"], mood: "cool", ms: 1100 },
+      { center: "bronze", row: [], mood: "ash", ms: 900 }
+    ]
+  },
+  lookWuxing: {
+    sound: "soft",
+    beats: [
+      { center: "tiles", row: [], mood: null, ms: 600 },
+      { center: "poem", row: ["metal"], mood: "ember", ms: 1000 },
+      { center: "tiles", row: ["wood", "fire"], mood: "ash", ms: 1000 }
+    ]
+  },
+  lookBoard: {
+    sound: "wood",
+    beats: [
+      { center: "board", row: [], mood: null, ms: 700 },
+      { center: "board", row: [], mood: "cool", ms: 1100 },
+      { center: "board", row: [], mood: null, ms: 900 }
+    ]
+  },
+  lookScroll: {
+    sound: "wood",
+    beats: [
+      { center: "shelf", row: [], mood: null, ms: 600 },
+      { center: "scroll", row: [], mood: "cool", ms: 1200 },
+      { center: "shelf", row: ["scroll"], mood: "ash", ms: 900 }
+    ]
+  },
+  lookHerbs: {
+    sound: "soft",
+    beats: [
+      { center: "shelf", row: [], mood: null, ms: 600 },
+      { center: "shelf", row: ["hongre", "hanyin", "xuelian", "qingre"], mood: "dawn", ms: 1200 },
+      { center: "shelf", row: [], mood: "cool", ms: 900 }
+    ]
+  },
+  lookNeedle: {
+    sound: "needle",
+    beats: [
+      { center: "needle", row: [], mood: "cool", ms: 900 },
+      { center: "bronze", row: ["needle"], mood: null, ms: 1000 }
+    ]
+  },
+  lookLetter: {
+    sound: "wood",
+    beats: [
+      { center: "letter", row: [], mood: "cool", ms: 900 },
+      { center: "scroll", row: ["letter"], mood: "ash", ms: 1000 }
+    ]
+  },
+  lookScale: {
+    sound: "soft",
+    beats: [
+      { center: "scale", row: [], mood: null, ms: 900 },
+      { center: "shelf", row: ["scale"], mood: "dawn", ms: 1000 }
+    ]
+  },
+  lookPill: {
+    sound: "soft",
+    beats: [
+      { center: "pill", row: [], mood: "dawn", ms: 900 },
+      { center: "elder", row: ["pill"], mood: "cool", ms: 1000 }
+    ]
+  },
+  lookSmear: {
+    sound: "crack",
+    beats: [
+      { center: "smear", row: [], mood: "ash", ms: 900 },
+      { center: "bowl", row: ["smear"], mood: "cool", ms: 1000 }
+    ]
+  },
+  lookBlade: {
+    sound: "soft",
+    beats: [
+      { center: "blade", row: [], mood: "mist", ms: 900 },
+      { center: "screen", row: ["blade"], mood: "ash", ms: 1100 }
+    ]
+  },
+  lookBarren: {
+    sound: "soft",
+    beats: [
+      { center: "wall", row: [], mood: "ash", ms: 700 },
+      { center: "brick", row: [], mood: "void", ms: 900 },
+      { center: "wall", row: [], mood: "ash", ms: 800 }
+    ]
+  },
+
+  // —— 關與關之間的過廊 ——
+  transit: {
+    sound: "door",
+    beats: [
+      { center: "door_0", row: [], mood: "ash", ms: 500 },
+      { center: "door_2", row: [], mood: "void", ms: 700 },
+      { center: "door_3", row: [], mood: "ash", ms: 600 }
+    ]
   }
 };
 
@@ -105,6 +399,65 @@ const ENDING_SKY = {
   buried: "buriedSky"
 };
 
+/** log 代號 → clip；進關／過關／調查／慶祝 */
+const LOG_CLIPS = {
+  "prologue.1": "door",
+  "cheat.joke": "cheat",
+  "enter.1.a": "enter1",
+  "enter.2.a": "enter2",
+  "enter.3.a": "enter3",
+  "enter.4.a": "enter4",
+  "enter.5.a": "enter5",
+  "enter.6.a": "enter6",
+  "enter.7.a": "enter7",
+  "clear.1.a": "clear1",
+  "clear.2.a": "clear2",
+  "clear.3.a": "clear3",
+  "clear.4.a": "board",
+  "clear.5.with.a": "brew",
+  "clear.5.none.a": "brewNone",
+  "clear.6.a": "clear6",
+  "bagua.success": "bagua",
+  "acupoint.success": "needle",
+  "needle.ready": "needle",
+  "wuxing.success": "wuxing",
+  "sword.success": "sword",
+  "letter.1": "letter",
+  "ending.freeChains": "chain",
+  "ending.placePill": "placePill",
+  "compass.inspect": "lookCompass",
+  "bagua.poem": "lookPoem",
+  "bronze.inspect": "lookBronze",
+  "wuxing.poem": "lookWuxing",
+  "ko.hint": "lookBoard",
+  "brew.scroll": "lookScroll",
+  "brew.herbs": "lookHerbs",
+  "needle.inspect": "lookNeedle",
+  "letter.inspect": "lookLetter",
+  "scale.inspect": "lookScale",
+  "pill.inspect": "lookPill",
+  "smear.inspect": "lookSmear",
+  "blade.inspect": "lookBlade",
+  "inspect.barren": "lookBarren"
+};
+
+const INSPECT_BY_TARGET = {
+  compass: "compass.inspect",
+  poem: "bagua.poem",
+  bronze: "bronze.inspect",
+  wuxing: "wuxing.poem",
+  board: "ko.hint",
+  herbs: "brew.herbs",
+  scroll: "brew.scroll",
+  needle: "needle.inspect",
+  letter: "letter.inspect",
+  scale: "scale.inspect",
+  pill: "pill.inspect",
+  acid_smear: "smear.inspect",
+  blade: "blade.inspect",
+  barren: "inspect.barren"
+};
+
 let reduced = false;
 let clip = null;
 let clipStarted = 0;
@@ -113,6 +466,7 @@ let lastKey = "";
 let lastLog = "";
 let lastEnding = null;
 let lastEndingPage = -1;
+let lastPhase = null;
 let soundHook = null;
 
 export function setReducedMotion(on) {
@@ -123,6 +477,15 @@ export function onAnimSound(fn) {
   soundHook = fn;
 }
 
+/** 同一目標再調查時補播短窺（首次仍由 syncAnim 播完整鏡頭）。 */
+export function noteInspect(target, now = performance.now()) {
+  const logId = INSPECT_BY_TARGET[target];
+  if (!logId) return;
+  const clipName = LOG_CLIPS[logId];
+  if (!clipName) return;
+  if (logId === lastLog && !animBusy(now)) play(clipName, now, { soft: true });
+}
+
 export function animBusy(now = performance.now()) {
   return holdUntil > now;
 }
@@ -130,10 +493,21 @@ export function animBusy(now = performance.now()) {
 export function fuseFrame(remainingMs) {
   if (remainingMs == null) return "fuse";
   const t = Math.max(0, Math.min(1, remainingMs / FULL_MS));
-  if (t > 0.66) return "fuse_0";
-  if (t > 0.33) return "fuse_1";
-  if (t > 0.08) return "fuse_2";
+  if (t > 0.72) return "fuse_0";
+  if (t > 0.42) return "fuse_1";
+  if (t > 0.16) return "fuse_2";
   return "fuse_3";
+}
+
+/** 第 7 關香壓迫：剩餘越少，畫面越沉（策略 C）。 */
+export function ashLevel(remainingMs) {
+  if (remainingMs == null) return 0;
+  const t = Math.max(0, Math.min(1, remainingMs / FULL_MS));
+  if (t > 0.66) return 0.12;
+  if (t > 0.4) return 0.22;
+  if (t > 0.18) return 0.34;
+  if (t > 0.06) return 0.46;
+  return 0.58;
 }
 
 export function syncAnim(state, now = performance.now()) {
@@ -153,11 +527,10 @@ export function syncAnim(state, now = performance.now()) {
     play(state.ending, now);
   } else if (state.ending && state.page !== lastEndingPage) {
     lastEndingPage = state.page;
-    if (state.page >= 2) {
+    if (state.page === 1) holdMood(state.ending, now);
+    else if (state.page >= 2) {
       const sky = ENDING_SKY[state.ending];
       if (sky) play(sky, now);
-    } else if (state.page === 1) {
-      play(state.ending, now, { soft: true });
     }
   }
   if (!state.ending) {
@@ -165,75 +538,158 @@ export function syncAnim(state, now = performance.now()) {
     lastEndingPage = -1;
   }
 
+  const phaseChanged = lastPhase != null && state.phase !== lastPhase && !state.ending;
   const log = state.log?.[0] ?? "";
   if (log !== lastLog) {
-    if (log === "prologue.1") play("door", now);
-    if (log === "cheat.joke") play("cheat", now);
-    if (log === "clear.4.a") play("board", now);
-    if (log === "clear.5.with.a") play("brew", now);
-    if (log === "clear.5.none.a") play("brewNone", now);
-    if (log === "bagua.success") play("bagua", now);
-    if (log === "acupoint.success" || log === "needle.ready") play("needle", now);
-    if (log === "wuxing.success") play("wuxing", now);
-    if (log === "sword.success") play("sword", now);
-    if (log === "letter.1") play("letter", now);
-    if (log === "ending.freeChains") play("chain", now);
-    if (log === "ending.placePill") play("placePill", now);
+    const clipName = LOG_CLIPS[log];
+    if (clipName) {
+      // 換關進 enter 時：過廊門縫 + 進關鏡頭連播
+      const withTransit = phaseChanged && state.beat === "enter" && String(clipName).startsWith("enter");
+      play(clipName, now, withTransit ? { transit: true } : {});
+    }
     if (log === "acupoint.step") soundHook?.("needle");
     if (log === "acupoint.fail") soundHook?.("needle");
     if (log === "brew.fail.qing" || log === "brew.fail.snow" || log === "brew.fail.ratio") soundHook?.("crack");
     if (log === "ko.success") soundHook?.("wood");
+    if (log === "ko.fail" || log === "bagua.fail" || log === "wuxing.fail" || log === "sword.fail") {
+      soundHook?.("crack");
+    }
     lastLog = log;
   }
 
+  lastPhase = state.phase;
   lastKey = key;
+}
+
+function clipDuration(beats) {
+  return beats.reduce((sum, beat) => sum + beat.ms, 0);
 }
 
 function play(name, now, options = {}) {
   const def = CLIPS[name];
   if (!def) return;
   if (reduced) {
-    clip = { name, frames: [def.frames[def.frames.length - 1]], ms: 0, shake: false };
+    const last = def.beats[def.beats.length - 1];
+    clip = {
+      name,
+      beats: [{ ...last, ms: 0 }],
+      shake: false
+    };
     clipStarted = now;
     holdUntil = now;
     if (!options.soft) soundHook?.(def.sound);
     return;
   }
-  const ms = options.soft ? Math.floor(def.ms * 0.55) : def.ms;
-  const frames = options.soft ? def.frames.slice(-Math.max(3, Math.ceil(def.frames.length / 2))) : def.frames;
-  clip = { name, frames, ms, shake: Boolean(def.shake) && !options.soft };
+  let beats = def.beats;
+  if (options.transit && CLIPS.transit) {
+    beats = [...CLIPS.transit.beats, ...def.beats];
+  }
+  if (options.soft) {
+    beats = beats.length > 2
+      ? [beats[0], beats[beats.length - 1]]
+      : beats;
+    beats = beats.map((beat) => ({ ...beat, ms: Math.max(400, Math.floor(beat.ms * 0.6)) }));
+  }
+  clip = {
+    name,
+    beats,
+    shake: Boolean(def.shake) && !options.soft
+  };
   clipStarted = now;
-  holdUntil = now + ms;
-  if (!options.soft) soundHook?.(def.sound);
+  holdUntil = now + clipDuration(beats);
+  if (!options.soft) soundHook?.(options.transit ? "door" : def.sound);
+}
+
+function holdMood(ending, now) {
+  const mood = endingMood(ending, 1);
+  const center = endingCenter(ending);
+  const row = endingRow(ending);
+  if (reduced) {
+    clip = { name: `${ending}-hold`, beats: [{ center, row, mood, ms: 0 }], shake: false };
+    clipStarted = now;
+    holdUntil = now;
+    return;
+  }
+  clip = {
+    name: `${ending}-hold`,
+    beats: [{ center, row, mood, ms: 1400 }],
+    shake: false
+  };
+  clipStarted = now;
+  holdUntil = now + 1400;
+}
+
+function endingCenter(ending) {
+  if (ending === "wolf") return "baihu";
+  if (ending === "flee") return "qinglong";
+  if (ending === "sever") return "pill";
+  if (ending === "ember") return "elder";
+  if (ending === "buried") return "fuse_3";
+  return "sky";
+}
+
+function endingRow(ending) {
+  if (ending === "sever") return ["elder"];
+  if (ending === "ember") return ["qinglong"];
+  return [];
+}
+
+function endingMood(ending, page) {
+  if (page >= 2) return "void";
+  if (ending === "wolf") return page === 1 ? "ash" : "ember";
+  if (ending === "flee") return page === 1 ? "cool" : "mist";
+  if (ending === "sever") return "cool";
+  if (ending === "ember") return page === 1 ? "mist" : "dawn";
+  if (ending === "buried") return "void";
+  return null;
+}
+
+function activeBeat(now) {
+  if (!clip?.beats?.length) return null;
+  let t = now - clipStarted;
+  for (const beat of clip.beats) {
+    if (t < beat.ms) return beat;
+    t -= beat.ms;
+  }
+  return clip.beats[clip.beats.length - 1];
 }
 
 export function stageView(state, now = performance.now()) {
-  const mood = moodFor(state);
   let center = null;
   let row = null;
+  let mood = moodFor(state);
 
-  if (clip && now < clipStarted + Math.max(clip.ms, 1)) {
-    const span = Math.max(clip.ms, 1);
-    const i = Math.min(clip.frames.length - 1, Math.floor(((now - clipStarted) / span) * clip.frames.length));
-    center = clip.frames[i];
-  } else if (clip && now >= clipStarted + clip.ms) {
+  if (clip && now < holdUntil) {
+    const beat = activeBeat(now);
+    if (beat) {
+      center = beat.center ?? null;
+      if (beat.row !== undefined) row = beat.row;
+      if (beat.mood !== undefined) mood = beat.mood;
+    }
+  } else if (clip && now >= holdUntil) {
     clip = null;
   }
 
   if (!center && state?.ending && state.page >= 2) {
     center = "sky";
     row = [];
+    mood = "void";
   }
 
-  const fuse = state?.phase === 7 && state.flags?.introDone && !state.ending
-    ? fuseFrame(state.timer?.remainingMs)
-    : null;
+  const inFinale = state?.phase === 7 && state.flags?.introDone && !state.ending;
+  const fuse = inFinale ? fuseFrame(state.timer?.remainingMs) : null;
+  const ash = inFinale
+    ? ashLevel(state.timer?.remainingMs)
+    : state?.ending && state.page >= 2
+      ? 0.35
+      : 0;
 
   return {
     center,
     row,
     mood,
     fuse,
+    ash,
     shake: Boolean(clip?.shake) && animBusy(now) ? 1 : 0,
     busy: animBusy(now)
   };
@@ -241,16 +697,12 @@ export function stageView(state, now = performance.now()) {
 
 function moodFor(state) {
   if (!state?.ending) {
-    if (state?.phase === 7 && state.flags?.introDone) return "ash";
+    if (state?.phase === 7 && state.flags?.introDone) {
+      return "ash";
+    }
     return null;
   }
-  if (state.page >= 2) return "void";
-  if (state.ending === "wolf") return "ember";
-  if (state.ending === "flee") return "mist";
-  if (state.ending === "sever") return "cool";
-  if (state.ending === "ember") return "dawn";
-  if (state.ending === "buried") return "void";
-  return null;
+  return endingMood(state.ending, state.page);
 }
 
 /** 測試用：重置內部狀態 */
@@ -262,4 +714,5 @@ export function resetAnim() {
   lastLog = "";
   lastEnding = null;
   lastEndingPage = -1;
+  lastPhase = null;
 }
