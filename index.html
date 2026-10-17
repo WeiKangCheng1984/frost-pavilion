@@ -8,67 +8,97 @@
     <link rel="stylesheet" href="src/styles.css">
   </head>
   <body>
-    <div id="fit">
-    <div class="shell" id="shell">
-      <header class="top">
-        <h1>血鎖寒閣</h1>
-        <div class="top-tools">
+    <div id="boot" class="boot" aria-label="開場">
+      <div class="boot-veil"></div>
+      <div class="boot-panel">
+        <p class="boot-brand">血鎖寒閣</p>
+        <p class="boot-line">門在前面。香還沒有斜。</p>
+        <div class="boot-actions">
+          <button type="button" id="boot-enter" class="btn-primary">入閣</button>
+          <button type="button" id="boot-resume" class="btn-primary" hidden>續入</button>
+        </div>
+        <div class="boot-tools">
+          <button type="button" data-mute aria-pressed="false">靜音</button>
+          <a class="text-button" href="licenses.html">授權</a>
+        </div>
+      </div>
+    </div>
+
+    <div id="fit" hidden>
+      <div class="shell" id="shell">
+        <header class="top">
+          <div class="top-title">
+            <p class="kicker" id="kicker"></p>
+            <h1 id="block-name"></h1>
+            <p class="ending-kicker" id="ending-kicker" hidden></p>
+          </div>
+          <div class="top-tools">
+            <div class="clock-wrap">
+              <p id="clock">亥時</p>
+              <div id="timer-bar" hidden></div>
+            </div>
+            <button type="button" id="menu-toggle" aria-expanded="false" aria-controls="menu">選項</button>
+          </div>
+        </header>
+
+        <div id="menu" class="menu" hidden>
           <div class="text-size" role="group" aria-label="字級">
             <button type="button" class="text-size-btn" data-text-size="s" aria-pressed="false">小</button>
             <button type="button" class="text-size-btn" data-text-size="m" aria-pressed="true">中</button>
             <button type="button" class="text-size-btn" data-text-size="l" aria-pressed="false">大</button>
           </div>
+          <button type="button" data-mute aria-pressed="false">靜音</button>
           <a class="text-button" href="licenses.html">授權</a>
-          <button type="button" id="mute" aria-pressed="false">靜音</button>
-          <div class="clock-wrap">
-            <p id="clock">亥時</p>
-            <div id="timer-bar" hidden></div>
+        </div>
+
+        <div class="play-grid">
+          <div class="play-main">
+            <section class="stage" id="stage" aria-label="當前畫面">
+              <canvas id="scene" width="384" height="216" aria-hidden="true"></canvas>
+              <p class="progress" id="progress"></p>
+            </section>
+
+            <section class="speech-wrap" aria-label="敘事">
+              <div id="speech" aria-live="polite"></div>
+            </section>
+
+            <p id="hint" class="hint"></p>
           </div>
+
+          <aside class="play-side" id="play-side" aria-label="背包與解謎">
+            <section class="bag-wrap" aria-label="背包">
+              <h2>背包</h2>
+              <div id="bag"></div>
+            </section>
+            <section class="actions" aria-label="操作">
+              <div class="verbs verbs-side">
+                <button type="button" id="submit" disabled>提交</button>
+              </div>
+              <div id="inspect-panel" hidden></div>
+              <div id="puzzle"></div>
+              <button type="button" id="close-letter" hidden>合上</button>
+              <button type="button" id="debug-skip" hidden>快轉 10 秒</button>
+              <div class="ending-actions" id="ending-actions" hidden>
+                <button type="button" id="save-card">下載結局卡</button>
+                <button type="button" id="restart">重開</button>
+              </div>
+            </section>
+          </aside>
         </div>
-      </header>
 
-      <section class="stage" id="stage" aria-label="當前畫面">
-        <canvas id="scene" width="384" height="216" aria-hidden="true"></canvas>
-        <div class="caption">
-          <p class="kicker" id="kicker"></p>
-          <p class="block-name" id="block-name"></p>
-          <p class="ending-kicker" id="ending-kicker" hidden></p>
-          <p class="progress" id="progress"></p>
-        </div>
-      </section>
-
-      <section class="speech-wrap" aria-label="敘事">
-        <div id="speech" aria-live="polite"></div>
-        <div class="speech-actions">
-          <button type="button" id="skip">跳過</button>
-          <button type="button" id="retreat" hidden>上一段</button>
-          <button type="button" id="advance" hidden>繼續</button>
-        </div>
-      </section>
-
-      <section class="bag-wrap" aria-label="背包">
-        <h2>背包</h2>
-        <div id="bag"></div>
-      </section>
-
-      <section class="actions" aria-label="操作">
-        <div class="verbs">
+        <nav class="dock" aria-label="主操作">
           <button type="button" id="inspect">調查</button>
           <button type="button" id="use">使用</button>
-          <button type="button" id="submit" disabled>提交</button>
-        </div>
-        <p id="hint" class="hint"></p>
-        <div id="inspect-panel" hidden></div>
-        <div id="puzzle"></div>
-        <button type="button" id="close-letter" hidden>合上</button>
-        <button type="button" id="debug-skip" hidden>快轉 10 秒</button>
-        <div class="ending-actions" id="ending-actions" hidden>
-          <button type="button" id="save-card">下載結局卡</button>
-          <button type="button" id="restart">重開</button>
-        </div>
-      </section>
+          <div class="dock-nav">
+            <button type="button" id="retreat" hidden>上一段</button>
+            <button type="button" id="skip" hidden>跳過</button>
+            <button type="button" id="advance" class="btn-primary" hidden>繼續</button>
+          </div>
+          <button type="button" id="side-toggle" aria-expanded="false" aria-controls="play-side">囊</button>
+        </nav>
+      </div>
     </div>
-    </div>
+
     <div id="card-modal" class="card-modal" hidden>
       <div class="card-modal-panel" role="dialog" aria-modal="true" aria-labelledby="card-modal-title">
         <p id="card-modal-title" class="card-modal-title">結局卡</p>
@@ -77,7 +107,7 @@
         </div>
         <p id="card-modal-ask" class="card-modal-ask">要將這張結局卡下載到裝置嗎?</p>
         <div class="card-modal-actions">
-          <button type="button" id="card-modal-save">下載</button>
+          <button type="button" id="card-modal-save" class="btn-primary">下載</button>
           <button type="button" id="card-modal-close">先不</button>
         </div>
       </div>

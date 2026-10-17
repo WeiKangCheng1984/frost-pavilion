@@ -9,7 +9,9 @@ import { paintFrame, paintMute, render } from "./view.js";
 const FRAME_CAP = 250;
 
 const audio = createAudio();
-let state = loadSave(sessionStorage) ?? initialState();
+const saved = loadSave(sessionStorage);
+let state = saved ?? initialState();
+let started = false;
 let lastFrame = 0;
 let nextTickSave = 0;
 
@@ -17,21 +19,22 @@ onAnimSound((name) => audio.playCue(name));
 setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
 function persist() {
+  if (!started) return;
   try {
     writeSave(state, sessionStorage);
   } catch {
-    // 這一頁寫不進時，遊玩仍繼續，重新整理才會回到第 1 關。
+    // 這一頁寫不進時，遊玩仍繼續。
   }
 }
 
 function send(action) {
+  if (!started && action.type !== "restart") return;
   const next = reduce(state, action);
   if (next === state) return;
   const prevEnding = state.ending;
   state = next;
   const tickOnly = action.type === "tick" && !state.ending;
   if (tickOnly) {
-    // 倒數每幀都整頁重繪／存檔會卡住計時，改成輕量更新。
     if (performance.now() >= nextTickSave) {
       nextTickSave = performance.now() + 1000;
       persist();
@@ -50,10 +53,47 @@ function armAudio() {
   audio.sync(state);
 }
 
-document.querySelector("#mute").addEventListener("click", () => {
-  audio.toggle();
+function bindMute() {
+  for (const button of document.querySelectorAll("[data-mute]")) {
+    button.addEventListener("click", () => {
+      audio.toggle();
+      paintMute(audio.muted);
+      audio.sync(state);
+    });
+  }
+}
+
+function showResume() {
+  const resume = document.querySelector("#boot-resume");
+  if (!resume) return;
+  const canResume = Boolean(saved)
+    && !(saved.beat === "prologue" && saved.page === 0 && saved.phase === 1 && !saved.inventory?.length);
+  resume.hidden = !canResume;
+}
+
+function enterGame(nextState) {
+  state = nextState;
+  started = true;
+  document.querySelector("#boot").hidden = true;
+  document.querySelector("#fit").hidden = false;
+  persist();
   paintMute(audio.muted);
+  render(state, send);
+  applyScale();
+  mountScale();
+  mountTextSize(() => send({ type: "skipToFinale" }));
   audio.sync(state);
+  lastFrame = 0;
+}
+
+document.querySelector("#boot-enter").addEventListener("click", () => {
+  armAudio();
+  enterGame(initialState());
+});
+
+document.querySelector("#boot-resume").addEventListener("click", () => {
+  armAudio();
+  enterGame(saved ?? initialState());
 });
 
 document.addEventListener("pointerdown", armAudio, { capture: true });
@@ -63,25 +103,26 @@ document.addEventListener("keydown", (event) => {
 
 document.addEventListener("visibilitychange", () => {
   lastFrame = 0;
-  send({ type: document.hidden ? "conceal" : "reveal" });
+  if (started) send({ type: document.hidden ? "conceal" : "reveal" });
 });
 
 function frame(now) {
   try {
-    if (!document.hidden && state.timer?.running) {
+    if (started && !document.hidden && state.timer?.running) {
       const delta = lastFrame === 0 ? 0 : Math.min(FRAME_CAP, now - lastFrame);
       if (delta > 0) send({ type: "tick", ms: delta });
     }
-    audio.sync(state, now);
-    paintFrame(state, now);
+    if (started) {
+      audio.sync(state, now);
+      paintFrame(state, now);
+    }
   } finally {
     lastFrame = now;
     window.requestAnimationFrame(frame);
   }
 }
 
+bindMute();
 paintMute(audio.muted);
-render(state, send);
-mountScale();
-mountTextSize(() => send({ type: "skipToFinale" }));
+showResume();
 window.requestAnimationFrame(frame);

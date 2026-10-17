@@ -45,7 +45,9 @@ let latest = null;
 let inspectOpen = false;
 let openPhase = 0;
 let chromeKey = "";
-let speech = { key: "", rows: [], count: 0, done: true, timer: 0 };
+let speech = { key: "", rows: [], count: 0, done: true, ready: true, timer: 0, readyTimer: 0 };
+let sideOpen = false;
+let menuOpen = false;
 let brewForm = emptyBrew();
 let focus = null;
 let selected = null;
@@ -164,27 +166,51 @@ function rowsFrom(ids) {
   return rows;
 }
 
+function speechPace(len) {
+  if (len <= 18) return 44;
+  if (len <= 48) return 34;
+  return 28;
+}
+
+function markSpeechReady() {
+  speech.ready = true;
+  paintSpeech();
+}
+
 function beginSpeech(rows, key) {
   window.clearInterval(speech.timer);
-  const done = reducedMotion || key.length === 0;
-  speech = { key, rows, count: done ? key.length : 0, done, timer: 0 };
-  if (done) return;
+  window.clearTimeout(speech.readyTimer);
+  const instant = reducedMotion || key.length === 0;
+  speech = {
+    key,
+    rows,
+    count: instant ? key.length : 0,
+    done: instant,
+    ready: instant,
+    timer: 0,
+    readyTimer: 0
+  };
+  if (instant) return;
+  const pace = speechPace(key.length);
   speech.timer = window.setInterval(() => {
     speech.count += 1;
     if (speech.count >= speech.key.length) {
       speech.count = speech.key.length;
       speech.done = true;
       window.clearInterval(speech.timer);
+      speech.readyTimer = window.setTimeout(markSpeechReady, 160);
     }
     paintSpeech();
-  }, 36);
+  }, pace);
 }
 
 function finishSpeech() {
-  if (speech.done) return;
+  if (speech.done && speech.ready) return;
   window.clearInterval(speech.timer);
+  window.clearTimeout(speech.readyTimer);
   speech.count = speech.key.length;
   speech.done = true;
+  speech.ready = true;
   paintSpeech();
 }
 
@@ -194,7 +220,7 @@ function paintSpeech() {
   const speechEl = document.querySelector("#speech");
   const skip = document.querySelector("#skip");
   if (!speechEl || !skip) return;
-  const mark = `${speech.key}:${speech.count}:${speech.done}`;
+  const mark = `${speech.key}:${speech.count}:${speech.done}:${speech.ready}`;
   if (mark === speechPaint) return;
   speechPaint = mark;
   const shown = speech.key.slice(0, speech.count).split("\n");
@@ -207,7 +233,7 @@ function paintSpeech() {
   skip.hidden = speech.done || !speech.key;
   paintAdvance();
   paintRetreat();
-  if (speech.done && latest?.state?.ending) paintRestart(latest.state, true);
+  if (speech.ready && latest?.state?.ending) paintRestart(latest.state, true);
 }
 
 function passageLabel(state) {
@@ -235,16 +261,17 @@ function paintAdvance() {
   const button = document.querySelector("#advance");
   const state = latest?.state;
   if (!button || !state) return;
-  const label = speech.done ? passageLabel(state) : "";
+  const label = speech.ready ? passageLabel(state) : "";
   button.hidden = !label;
   button.textContent = label || "繼續";
+  button.classList.add("btn-primary");
 }
 
 function paintRetreat() {
   const button = document.querySelector("#retreat");
   const state = latest?.state;
   if (!button || !state) return;
-  button.hidden = !speech.done || !canRetreat(state);
+  button.hidden = !speech.ready || !canRetreat(state);
 }
 
 function paintChrome() {
@@ -268,9 +295,11 @@ function paintChrome() {
   paintScene(state);
 
   const inPlay = state.beat === "play" && !state.flags.letterOpen;
-  document.querySelector(".bag-wrap").hidden = ended;
-  document.querySelector(".verbs").hidden = ended || !inPlay;
+  const bagWrap = document.querySelector(".bag-wrap");
+  if (bagWrap) bagWrap.hidden = ended;
   document.querySelector("#hint").hidden = ended;
+  document.querySelector("#inspect").hidden = ended;
+  document.querySelector("#use").hidden = ended;
   paintRestart(state, ended);
   const use = document.querySelector("#use");
   if (use) use.disabled = !inPlay || Boolean(state.pending) || glanceOpen(state) || animBusy();
@@ -281,11 +310,33 @@ function paintChrome() {
     paintBag(state, send);
     paintHint(state);
     paintInspect(state, send);
+  } else {
+    const panel = document.querySelector("#inspect-panel");
+    if (panel) panel.hidden = true;
+    const puzzle = document.querySelector("#puzzle");
+    if (puzzle) puzzle.replaceChildren();
   }
   paintPuzzle(state, send);
   paintSubmit(state);
+  paintSideChrome();
 
   document.querySelector("#inspect").setAttribute("aria-expanded", String(inspectOpen));
+}
+
+function paintSideChrome() {
+  const side = document.querySelector("#play-side");
+  const toggle = document.querySelector("#side-toggle");
+  const menu = document.querySelector("#menu");
+  const menuToggle = document.querySelector("#menu-toggle");
+  if (side) side.classList.toggle("is-open", sideOpen);
+  if (toggle) toggle.setAttribute("aria-expanded", String(sideOpen));
+  if (menu) menu.hidden = !menuOpen;
+  if (menuToggle) menuToggle.setAttribute("aria-expanded", String(menuOpen));
+}
+
+function openSide() {
+  sideOpen = true;
+  paintSideChrome();
 }
 
 function paintRestart(state, ended) {
@@ -301,8 +352,8 @@ function paintRestart(state, ended) {
   }
   const ids = endingPageIds(state.ending, state);
   const onLast = state.page >= ids.length - 1;
-  const key = `${state.ending}:${state.page}:${speech.done}`;
-  if (!onLast || !speech.done) {
+  const key = `${state.ending}:${state.page}:${speech.ready}`;
+  if (!onLast || !speech.ready) {
     wrap.hidden = true;
     return;
   }
@@ -314,6 +365,7 @@ function paintRestart(state, ended) {
   restartDelayTimer = window.setTimeout(() => {
     if (latest?.state?.ending === state.ending && latest.state.page === state.page) {
       wrap.hidden = false;
+      openSide();
     }
   }, delay);
 }
@@ -478,6 +530,7 @@ function paintInspect(state, send) {
       focus = item.target;
       send({ type: "inspect", target: item.target });
       noteInspect(item.target);
+      openSide();
       paintScene(latest.state);
     });
     panel.append(button);
@@ -641,26 +694,34 @@ function repaint() {
 }
 
 export function paintMute(muted) {
-  const button = document.querySelector("#mute");
-  if (!button) return;
-  button.setAttribute("aria-pressed", String(muted));
-  button.textContent = muted ? "開聲" : "靜音";
+  for (const button of document.querySelectorAll("[data-mute]")) {
+    button.setAttribute("aria-pressed", String(muted));
+    button.textContent = muted ? "開聲" : "靜音";
+  }
 }
 
 function bindStatic() {
   document.querySelector("#skip").addEventListener("click", finishSpeech);
   document.querySelector("#advance").addEventListener("click", () => {
-    if (!speech.done || !latest) return;
+    if (!speech.ready || !latest) return;
     focus = null;
     if (glanceOpen(latest.state)) latest.send({ type: "acknowledge" });
     else latest.send({ type: "advance" });
   });
   document.querySelector("#retreat").addEventListener("click", () => {
-    if (!speech.done) return;
+    if (!speech.ready) return;
     focus = null;
     latest?.send({ type: "retreat" });
   });
   document.querySelector("#speech").addEventListener("click", finishSpeech);
+  document.querySelector("#menu-toggle").addEventListener("click", () => {
+    menuOpen = !menuOpen;
+    paintSideChrome();
+  });
+  document.querySelector("#side-toggle").addEventListener("click", () => {
+    sideOpen = !sideOpen;
+    paintSideChrome();
+  });
   document.querySelector("#inspect").addEventListener("click", () => {
     if (!latest) return;
     if (selected) {
@@ -676,6 +737,7 @@ function bindStatic() {
       return;
     }
     inspectOpen = !inspectOpen;
+    if (inspectOpen) openSide();
     repaint();
   });
   document.querySelector("#use").addEventListener("click", () => {
@@ -755,7 +817,9 @@ function closeCardPreview() {
 }
 
 const timerBar = document.querySelector("#timer-bar");
-for (let i = 0; i < 10; i += 1) timerBar.append(document.createElement("span"));
+if (timerBar) {
+  for (let i = 0; i < 10; i += 1) timerBar.append(document.createElement("span"));
+}
 
 motionQuery.addEventListener("change", () => {
   reducedMotion = motionQuery.matches;
