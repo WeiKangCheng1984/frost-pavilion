@@ -63,31 +63,33 @@
             </section>
 
             <p id="hint" class="hint"></p>
+
+            <section class="hand-main" aria-label="調查與解謎">
+              <div id="inspect-panel" class="inspect-panel" hidden></div>
+              <div id="puzzle" class="puzzle"></div>
+              <div class="hand-tools">
+                <button type="button" id="submit" hidden disabled>提交</button>
+                <button type="button" id="close-letter" hidden>合上</button>
+                <button type="button" id="debug-skip" hidden>快轉 10 秒</button>
+              </div>
+            </section>
           </div>
 
-          <aside class="play-side" id="play-side" aria-label="背包與解謎">
+          <aside class="bag-drawer" id="bag-drawer" aria-label="行囊">
+            <div class="bag-head">
+              <h2 id="bag-title">囊</h2>
+              <button type="button" id="bag-close" class="bag-close" aria-label="關閉行囊">合</button>
+            </div>
             <section class="bag-wrap" aria-label="背包">
-              <h2>背包</h2>
               <div id="bag"></div>
             </section>
-            <section class="actions" aria-label="操作">
-              <div class="verbs verbs-side">
-                <button type="button" id="submit" disabled>提交</button>
-              </div>
-              <div id="inspect-panel" hidden></div>
-              <div id="puzzle"></div>
-              <button type="button" id="close-letter" hidden>合上</button>
-              <button type="button" id="debug-skip" hidden>快轉 10 秒</button>
-              <div class="ending-actions" id="ending-actions" hidden>
-                <button type="button" id="save-card">下載結局卡</button>
-                <button type="button" id="restart">重開</button>
-              </div>
-            </section>
+            <div class="ending-actions" id="ending-actions" hidden>
+              <button type="button" id="save-card">下載結局卡</button>
+              <button type="button" id="restart">重開</button>
+            </div>
           </aside>
         </div>
       </div>
-
-      <button type="button" id="sheet-scrim" class="sheet-scrim" hidden aria-label="關閉面板"></button>
 
       <nav class="dock" id="dock" aria-label="主操作">
         <button type="button" id="inspect">調查</button>
@@ -97,7 +99,7 @@
           <button type="button" id="skip" hidden>跳過</button>
           <button type="button" id="advance" class="btn-primary" hidden>繼續</button>
         </div>
-        <button type="button" id="side-toggle" aria-expanded="false" aria-controls="play-side">囊</button>
+        <button type="button" id="bag-toggle" aria-expanded="false" aria-controls="bag-drawer">囊</button>
       </nav>
     </div>
 

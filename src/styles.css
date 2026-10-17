@@ -62,10 +62,6 @@ body {
   background: var(--veil);
 }
 
-body[data-sheet="open"] {
-  overflow: hidden;
-}
-
 button,
 p,
 a,
@@ -195,14 +191,12 @@ button[aria-pressed="true"] {
 #shell {
   position: relative;
   width: var(--shell-w);
-  transform-origin: top left;
   background: var(--paper);
   min-height: 100%;
   padding-bottom: 8px;
   border-left: 1px solid var(--ink);
   border-right: 1px solid var(--ink);
   overflow: visible;
-  z-index: 1;
 }
 
 .top {
@@ -345,24 +339,39 @@ button[aria-pressed="true"] {
   min-height: var(--ui-line);
 }
 
-.play-side {
-  padding: 8px 10px 12px;
-  border-top: 1px solid var(--line);
+/* —— 主欄手面：調查列＋解謎（方案 B） —— */
+.hand-main {
+  margin: 8px 8px 0;
+  padding: 0 0 8px;
 }
 
-.bag-wrap h2 {
-  margin: 0 0 8px;
-  font-size: 16px;
+.hand-label {
+  margin: 0 0 6px;
+  font-size: var(--ui-size);
   font-weight: 400;
-  line-height: 16px;
+  line-height: var(--ui-line);
+  color: var(--mute);
+}
+
+.inspect-panel:not([hidden]),
+.puzzle:not(:empty),
+.hand-tools:not(:empty) {
+  margin-top: 8px;
+}
+
+.inspect-panel:not([hidden]) {
+  padding: 8px;
+  border: 1px solid var(--ink);
+  background: var(--paper-deep);
 }
 
 #bag,
-.verbs,
-#puzzle,
-#inspect-panel,
+.puzzle,
+.inspect-panel,
+.hand-tools,
 .dock,
-.dock-nav {
+.dock-nav,
+.ending-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -370,13 +379,8 @@ button[aria-pressed="true"] {
 
 #bag p { margin: 0; color: var(--mute); }
 
-.verbs-side { margin-top: 4px; }
-
-#inspect-panel,
-#puzzle { margin-top: 8px; }
-
 #inspect[aria-expanded="true"],
-#side-toggle[aria-expanded="true"],
+#bag-toggle[aria-expanded="true"],
 #menu-toggle[aria-expanded="true"] {
   background: var(--ink);
   color: var(--paper);
@@ -398,27 +402,39 @@ button[aria-pressed="true"] {
 
 #close-letter,
 #debug-skip,
-.back { margin-top: 8px; }
+.back { margin-top: 0; }
 
-.ending-actions {
+/* —— 囊抽屜：無遮罩，只蓋底欄上方一截 —— */
+.bag-drawer {
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+  padding: 8px 10px 12px;
+}
+
+.bag-head {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  margin-top: 12px;
+  margin-bottom: 8px;
 }
 
-/* —— 底欄／囊面板：放在 #shell 外，避免被 scale transform 困住 —— */
-.sheet-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  border: 0;
-  padding: 0;
+.bag-head h2 {
   margin: 0;
-  min-height: 0;
-  background: rgba(20, 17, 14, 0.5);
-  cursor: pointer;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 16px;
 }
+
+.bag-close {
+  min-width: 44px;
+  min-height: 36px;
+  padding: 0 8px;
+}
+
+.bag-wrap { margin-bottom: 4px; }
+
+.ending-actions { margin-top: 8px; }
 
 .dock {
   position: fixed;
@@ -427,7 +443,7 @@ button[aria-pressed="true"] {
   transform: translateX(-50%);
   width: var(--frame-w, min(384px, 100%));
   max-width: 100%;
-  z-index: 60;
+  z-index: 30;
   padding: 8px;
   padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
   gap: 6px;
@@ -436,6 +452,7 @@ button[aria-pressed="true"] {
   justify-content: space-between;
   align-items: center;
   box-sizing: border-box;
+  touch-action: manipulation;
 }
 
 .dock > button { flex: 0 0 auto; min-width: 52px; }
@@ -450,9 +467,9 @@ button[aria-pressed="true"] {
   min-width: 72px;
 }
 
-/* 手機：側欄自底欄上方浮出 */
+/* 手機：主欄常駐解謎；囊為矮抽屜，不降暗主畫面 */
 @media (max-width: 719px) {
-  .play-side {
+  .bag-drawer {
     display: none;
     position: fixed;
     left: 50%;
@@ -460,19 +477,20 @@ button[aria-pressed="true"] {
     transform: translateX(-50%);
     width: var(--frame-w, min(384px, 100%));
     max-width: 100%;
-    max-height: min(52vh, 420px);
+    max-height: min(36vh, 280px);
     overflow-x: hidden;
     overflow-y: auto;
+    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    z-index: 50;
-    background: var(--paper);
+    z-index: 25;
     border: 1px solid var(--ink);
     border-bottom: none;
-    box-shadow: 0 -6px 0 rgba(22, 18, 15, 0.12);
+    box-shadow: 0 -4px 0 rgba(22, 18, 15, 0.1);
     box-sizing: border-box;
+    touch-action: manipulation;
   }
 
-  .play-side.is-open { display: block; }
+  .bag-drawer.is-open { display: block; }
 
   #fit { padding-bottom: calc(var(--dock-h) + 20px + env(safe-area-inset-bottom, 0px)); }
 }
@@ -482,8 +500,6 @@ button[aria-pressed="true"] {
   :root { --shell-w: 720px; }
 
   #fit { padding-bottom: 16px; }
-
-  .sheet-scrim { display: none !important; }
 
   .play-grid {
     display: grid;
@@ -497,20 +513,23 @@ button[aria-pressed="true"] {
     padding-bottom: 12px;
   }
 
-  .play-side {
+  .bag-drawer {
     display: block !important;
     position: static;
     transform: none;
+    width: auto;
+    max-width: none;
     max-height: none;
     overflow: visible;
+    border: none;
     border-top: none;
-    border-left: none;
     box-shadow: none;
     padding-top: 12px;
-    width: auto;
   }
 
-  #side-toggle { display: none; }
+  .bag-head { display: none; }
+
+  #bag-toggle { display: none; }
 
   .dock {
     position: relative;
@@ -520,7 +539,7 @@ button[aria-pressed="true"] {
     width: 100%;
     max-width: none;
     margin-top: 0;
-    z-index: 2;
+    z-index: auto;
   }
 
   #scene { max-width: none; }
@@ -533,32 +552,34 @@ button[aria-pressed="true"] {
   display: grid;
   place-items: center;
   padding: 16px;
-  background: rgba(20, 17, 14, 0.72);
+  background: rgba(20, 17, 14, 0.78);
 }
 
 .card-modal-panel {
-  width: min(420px, 100%);
-  max-height: min(92vh, 920px);
+  width: min(440px, 100%);
+  max-height: min(94vh, 980px);
   overflow: auto;
   background: var(--paper);
   border: 2px solid var(--ink);
-  padding: 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .card-modal-title {
   margin: 0;
   color: var(--cinnabar);
   text-align: center;
+  font-size: 16px;
+  line-height: 20px;
 }
 
 .card-modal-frame {
   background: #14110e;
   border: 1px solid var(--ink);
-  padding: 8px;
-  max-height: min(58vh, 560px);
+  padding: 10px;
+  max-height: min(64vh, 640px);
   overflow: auto;
 }
 
@@ -573,6 +594,7 @@ button[aria-pressed="true"] {
   margin: 0;
   color: var(--mute);
   text-align: center;
+  font-size: var(--speech-size);
   line-height: var(--speech-line);
 }
 

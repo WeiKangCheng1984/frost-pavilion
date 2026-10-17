@@ -46,8 +46,9 @@ let inspectOpen = false;
 let openPhase = 0;
 let chromeKey = "";
 let speech = { key: "", rows: [], count: 0, done: true, ready: true, timer: 0, readyTimer: 0 };
-let sideOpen = false;
+let bagOpen = false;
 let menuOpen = false;
+let hintNudge = "";
 let brewForm = emptyBrew();
 let focus = null;
 let selected = null;
@@ -82,6 +83,7 @@ export function render(state, send) {
     inspectOpen = false;
     focus = null;
     selected = null;
+    hintNudge = "";
     if (state.phase === 5) brewForm = emptyBrew();
     openPhase = state.phase;
   }
@@ -180,6 +182,7 @@ function markSpeechReady() {
 function beginSpeech(rows, key) {
   window.clearInterval(speech.timer);
   window.clearTimeout(speech.readyTimer);
+  hintNudge = "";
   const instant = reducedMotion || key.length === 0;
   speech = {
     key,
@@ -302,7 +305,22 @@ function paintChrome() {
   document.querySelector("#use").hidden = ended;
   paintRestart(state, ended);
   const use = document.querySelector("#use");
-  if (use) use.disabled = !inPlay || Boolean(state.pending) || glanceOpen(state) || animBusy();
+  if (use) {
+    const blocked = !inPlay || Boolean(state.pending) || glanceOpen(state) || animBusy();
+    use.disabled = blocked;
+    use.title = blocked
+      ? "此時不可使用"
+      : selected
+        ? `使用：${items[selected] ?? selected}`
+        : "先於囊中點選物品";
+  }
+  const inspectBtn = document.querySelector("#inspect");
+  if (inspectBtn) {
+    const inspectBlocked = !inPlay || Boolean(state.pending) || glanceOpen(state) || animBusy() || ended;
+    inspectBtn.disabled = inspectBlocked;
+    inspectBtn.title = inspectBlocked ? "此時不可調查" : "調查眼前或囊中之物";
+    inspectBtn.setAttribute("aria-expanded", String(inspectOpen));
+  }
   document.querySelector("#close-letter").hidden = true;
   document.querySelector("#debug-skip").hidden = !debug || ended || !state.timer?.running;
 
@@ -311,6 +329,7 @@ function paintChrome() {
     paintHint(state);
     paintInspect(state, send);
   } else {
+    inspectOpen = false;
     const panel = document.querySelector("#inspect-panel");
     if (panel) panel.hidden = true;
     const puzzle = document.querySelector("#puzzle");
@@ -318,29 +337,43 @@ function paintChrome() {
   }
   paintPuzzle(state, send);
   paintSubmit(state);
-  paintSideChrome();
-
-  document.querySelector("#inspect").setAttribute("aria-expanded", String(inspectOpen));
+  paintBagChrome();
 }
 
-function paintSideChrome() {
-  const side = document.querySelector("#play-side");
-  const toggle = document.querySelector("#side-toggle");
+function isWideLayout() {
+  return window.matchMedia("(min-width: 720px)").matches;
+}
+
+function paintBagChrome() {
+  const drawer = document.querySelector("#bag-drawer");
+  const toggle = document.querySelector("#bag-toggle");
   const menu = document.querySelector("#menu");
   const menuToggle = document.querySelector("#menu-toggle");
-  const scrim = document.querySelector("#sheet-scrim");
-  const wide = window.matchMedia("(min-width: 720px)").matches;
-  if (side) side.classList.toggle("is-open", sideOpen);
-  if (toggle) toggle.setAttribute("aria-expanded", String(sideOpen));
-  if (scrim) scrim.hidden = wide || !sideOpen;
+  const title = document.querySelector("#bag-title");
+  const wide = isWideLayout();
+  if (drawer) {
+    drawer.classList.toggle("is-open", wide || bagOpen);
+    drawer.setAttribute("aria-hidden", wide ? "false" : String(!bagOpen));
+  }
+  if (toggle) {
+    toggle.setAttribute("aria-expanded", String(Boolean(bagOpen)));
+    toggle.hidden = Boolean(latest?.state?.ending);
+  }
   if (menu) menu.hidden = !menuOpen;
   if (menuToggle) menuToggle.setAttribute("aria-expanded", String(menuOpen));
-  document.body.dataset.sheet = sideOpen && !wide ? "open" : "closed";
+  if (title) {
+    title.textContent = selected ? `囊 · ${items[selected] ?? selected}` : "囊";
+  }
 }
 
-function openSide() {
-  sideOpen = true;
-  paintSideChrome();
+function openBag() {
+  bagOpen = true;
+  paintBagChrome();
+}
+
+function closeBag() {
+  bagOpen = false;
+  paintBagChrome();
 }
 
 function paintRestart(state, ended) {
@@ -369,7 +402,7 @@ function paintRestart(state, ended) {
   restartDelayTimer = window.setTimeout(() => {
     if (latest?.state?.ending === state.ending && latest.state.page === state.page) {
       wrap.hidden = false;
-      openSide();
+      openBag();
     }
   }, delay);
 }
@@ -469,6 +502,7 @@ function currentSequence(state) {
 
 function paintBag(state, send) {
   const bag = document.querySelector("#bag");
+  if (!bag) return;
   bag.replaceChildren();
   if (state.inventory.length === 0) {
     const empty = document.createElement("p");
@@ -484,6 +518,8 @@ function paintBag(state, send) {
     button.addEventListener("click", () => {
       selected = selected === id ? null : id;
       focus = selected;
+      hintNudge = "";
+      if (!isWideLayout()) openBag();
       repaint();
     });
     bag.append(button);
@@ -492,6 +528,10 @@ function paintBag(state, send) {
 
 function paintHint(state) {
   const hint = document.querySelector("#hint");
+  if (hintNudge) {
+    hint.textContent = hintNudge;
+    return;
+  }
   if (state.beat === "cheat" || state.beat === "prologue" || state.beat === "enter" || state.beat === "clear") {
     hint.textContent = hints.passage;
     return;
@@ -523,19 +563,29 @@ function paintHint(state) {
 
 function paintInspect(state, send) {
   const panel = document.querySelector("#inspect-panel");
-  const targets = INSPECTS[state.phase] ?? [];
-  panel.hidden = !inspectOpen || targets.length === 0;
+  if (!panel) return;
+  const inPlay = state.beat === "play" && !state.flags.letterOpen && !state.ending;
+  const targets = inPlay ? (INSPECTS[state.phase] ?? []) : [];
+  const show = inspectOpen && targets.length > 0;
+  panel.hidden = !show;
   panel.replaceChildren();
+  if (!show) return;
+  const lead = document.createElement("p");
+  lead.className = "hand-label";
+  lead.textContent = "要看何處";
+  panel.append(lead);
   for (const item of targets) {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = item.label;
     button.addEventListener("click", () => {
       focus = item.target;
+      inspectOpen = false;
+      hintNudge = "";
       send({ type: "inspect", target: item.target });
       noteInspect(item.target);
-      openSide();
       paintScene(latest.state);
+      repaint();
     });
     panel.append(button);
   }
@@ -709,6 +759,7 @@ function bindStatic() {
   document.querySelector("#advance").addEventListener("click", () => {
     if (!speech.ready || !latest) return;
     focus = null;
+    inspectOpen = false;
     if (glanceOpen(latest.state)) latest.send({ type: "acknowledge" });
     else latest.send({ type: "advance" });
   });
@@ -720,38 +771,70 @@ function bindStatic() {
   document.querySelector("#speech").addEventListener("click", finishSpeech);
   document.querySelector("#menu-toggle").addEventListener("click", () => {
     menuOpen = !menuOpen;
-    paintSideChrome();
+    paintBagChrome();
   });
-  document.querySelector("#side-toggle").addEventListener("click", () => {
-    sideOpen = !sideOpen;
-    paintSideChrome();
+  document.querySelector("#bag-toggle").addEventListener("click", () => {
+    if (isWideLayout()) return;
+    bagOpen = !bagOpen;
+    paintBagChrome();
   });
-  document.querySelector("#sheet-scrim")?.addEventListener("click", () => {
-    sideOpen = false;
-    inspectOpen = false;
-    paintSideChrome();
-    if (latest) repaint();
+  document.querySelector("#bag-close")?.addEventListener("click", () => {
+    if (!isWideLayout()) closeBag();
   });
   document.querySelector("#inspect").addEventListener("click", () => {
     if (!latest) return;
+    const state = latest.state;
+    const blocked = state.ending
+      || state.beat !== "play"
+      || state.flags.letterOpen
+      || glanceOpen(state)
+      || animBusy()
+      || Boolean(state.pending);
+    if (blocked) {
+      hintNudge = glanceOpen(state) || !speech.ready
+        ? "這段看完，再調查。"
+        : "此時不可調查。";
+      paintHint(state);
+      return;
+    }
+    hintNudge = "";
     if (selected) {
       focus = selected;
+      inspectOpen = false;
       latest.send({ type: "inspect", target: selected });
       noteInspect(selected);
       return;
     }
-    const targets = INSPECTS[latest.state.phase] ?? [];
+    const targets = INSPECTS[state.phase] ?? [];
     if (targets.length === 0) {
+      inspectOpen = false;
       latest.send({ type: "inspect", target: "barren" });
       noteInspect("barren");
       return;
     }
     inspectOpen = !inspectOpen;
-    if (inspectOpen) openSide();
+    if (!isWideLayout()) closeBag();
     repaint();
+    if (inspectOpen) {
+      document.querySelector("#inspect-panel")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
   });
   document.querySelector("#use").addEventListener("click", () => {
-    if (!latest || document.querySelector("#use").disabled) return;
+    if (!latest) return;
+    const useBtn = document.querySelector("#use");
+    if (useBtn?.disabled) {
+      hintNudge = "此時不可使用。";
+      paintHint(latest.state);
+      return;
+    }
+    if (!selected) {
+      hintNudge = "先於囊中點選要使用的物品。";
+      inspectOpen = false;
+      openBag();
+      repaint();
+      return;
+    }
+    hintNudge = "";
     const choice = selected === "blade" ? "blade" : selected === "pill" ? "pill" : selected === "acid_smear" ? "smear" : "";
     if (latest.state.phase === 7 && choice) {
       latest.send({ type: "propose", choice });
@@ -838,6 +921,9 @@ motionQuery.addEventListener("change", () => {
 });
 
 bindStatic();
+window.addEventListener("resize", () => {
+  paintBagChrome();
+});
 loadSprites();
 onSprites(() => {
   if (latest) paintScene(latest.state);

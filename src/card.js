@@ -5,7 +5,9 @@ import { endingKickerId, endingPageIds } from "./endings.js";
 import { CELL, COLUMNS, FRAME_NAMES } from "./sprite-frames.js";
 
 const W = 720;
-const H = 1100;
+const H = 1520;
+const FONT = '"Fusion Pixel 12px Prop zh-Hant", sans-serif';
+const MARGIN = 56;
 
 const FRAME_BY_ENDING = {
   wolf: "baihu",
@@ -29,6 +31,7 @@ const INK = "#1c1612";
 const MUTE = "#5e564c";
 const CINNABAR = "#8d2f2a";
 const LINE = "#c9b896";
+const VEIL = "#14110e";
 
 export function cardDetails(state) {
   const ending = state?.ending;
@@ -105,7 +108,7 @@ function pathLabel(info) {
   else if (info.hasPill) bits.push("丹在袖");
   if (info.chainsFreed) bits.push("鏈已化");
   else if (info.hasSmear) bits.push("膏未用");
-    if (info.ending === "buried" || info.remainingMs === 0) bits.push("香已盡");
+  if (info.ending === "buried" || info.remainingMs === 0) bits.push("香已盡");
   else if (info.remainingMs != null) bits.push(`香餘${Math.ceil(info.remainingMs / 1000)}秒`);
   return bits.join(" · ");
 }
@@ -169,95 +172,166 @@ export function drawEndingCard(details, sheet) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
+  paintPaper(ctx);
+  paintFrame(ctx);
+
+  let y = 72;
+  ctx.textAlign = "center";
+  ctx.fillStyle = CINNABAR;
+  ctx.font = `32px ${FONT}`;
+  ctx.fillText(details.title, W / 2, y);
+  y += 36;
+  ctx.fillStyle = MUTE;
+  ctx.font = `22px ${FONT}`;
+  ctx.fillText(details.subtitle, W / 2, y);
+
+  y += 52;
+  ctx.fillStyle = INK;
+  ctx.font = `56px ${FONT}`;
+  ctx.fillText(details.endingName, W / 2, y);
+  y += 40;
+  if (details.kicker) {
+    ctx.fillStyle = CINNABAR;
+    ctx.font = `28px ${FONT}`;
+    ctx.fillText(`「${details.kicker}」`, W / 2, y);
+    y += 28;
+  }
+
+  y += 18;
+  y = paintArt(ctx, sheet, details.frame, y);
+  y += 36;
+
+  ctx.textAlign = "left";
+  y = paintSection(ctx, "本局評語", details.epitaph, y, {
+    labelSize: 22,
+    bodySize: 26,
+    lineHeight: 36,
+    maxRows: 4,
+    bodyColor: INK
+  });
+  y += 22;
+
+  if (details.quote) {
+    y = paintSection(ctx, "終章一句", details.quote, y, {
+      labelSize: 22,
+      bodySize: 24,
+      lineHeight: 34,
+      maxRows: 3,
+      bodyColor: MUTE
+    });
+    y += 22;
+  }
+
+  y = paintRule(ctx, y);
+  y += 28;
+
+  y = paintSection(ctx, "路途細節", details.pathLabel, y, {
+    labelSize: 22,
+    bodySize: 24,
+    lineHeight: 34,
+    maxRows: 2,
+    bodyColor: MUTE
+  });
+  y += 18;
+
+  ctx.fillStyle = INK;
+  ctx.font = `22px ${FONT}`;
+  for (const line of details.marks) {
+    y = wrapText(ctx, `· ${line}`, MARGIN, y, W - MARGIN * 2, 32, 2) + 14;
+  }
+
+  y += 16;
+  y = paintRule(ctx, y);
+  y += 28;
+
+  y = paintSection(ctx, "囊中尚餘", details.bag.length ? details.bag.join("　") : "空——兩袖清風，或兩袖塵土。", y, {
+    labelSize: 22,
+    bodySize: 24,
+    lineHeight: 34,
+    maxRows: 2,
+    bodyColor: MUTE
+  });
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = MUTE;
+  ctx.font = `22px ${FONT}`;
+  ctx.fillText("寒閣一遊 · 留作紀念", W / 2, H - 52);
+
+  return canvas;
+}
+
+function paintPaper(ctx) {
   ctx.fillStyle = PAPER;
   ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = PAPER_DEEP;
-  ctx.fillRect(0, 0, W, 108);
-  ctx.fillRect(0, H - 88, W, 88);
+  ctx.fillRect(0, 0, W, 128);
+  ctx.fillRect(0, H - 96, W, 96);
 
+  /* 淡紋：讓紙面不那麼平 */
+  ctx.strokeStyle = "rgba(201, 184, 150, 0.35)";
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 8; i += 1) {
+    const gy = 160 + i * 120;
+    ctx.beginPath();
+    ctx.moveTo(40, gy);
+    ctx.lineTo(W - 40, gy);
+    ctx.stroke();
+  }
+}
+
+function paintFrame(ctx) {
   ctx.strokeStyle = INK;
-  ctx.lineWidth = 4;
-  ctx.strokeRect(14, 14, W - 28, H - 28);
+  ctx.lineWidth = 5;
+  ctx.strokeRect(16, 16, W - 32, H - 32);
   ctx.strokeStyle = LINE;
   ctx.lineWidth = 2;
-  ctx.strokeRect(26, 26, W - 52, H - 52);
+  ctx.strokeRect(30, 30, W - 60, H - 60);
+  ctx.strokeStyle = CINNABAR;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(38, 38, W - 76, H - 76);
+}
 
-  ctx.textAlign = "center";
-  ctx.fillStyle = CINNABAR;
-  ctx.font = '26px "Fusion Pixel 12px Prop zh-Hant", sans-serif';
-  ctx.fillText(details.title, W / 2, 58);
-  ctx.fillStyle = MUTE;
-  ctx.font = '18px "Fusion Pixel 12px Prop zh-Hant", sans-serif';
-  ctx.fillText(details.subtitle, W / 2, 88);
-
-  ctx.fillStyle = INK;
-  ctx.font = '42px "Fusion Pixel 12px Prop zh-Hant", sans-serif';
-  ctx.fillText(details.endingName, W / 2, 156);
-  if (details.kicker) {
-    ctx.fillStyle = CINNABAR;
-    ctx.font = '24px "Fusion Pixel 12px Prop zh-Hant", sans-serif';
-    ctx.fillText(`「${details.kicker}」`, W / 2, 194);
-  }
-
-  const artY = 220;
-  const artSize = 168;
+function paintArt(ctx, sheet, frame, top) {
+  const artSize = 200;
   const artX = Math.floor((W - artSize) / 2);
-  ctx.fillStyle = "#14110e";
-  ctx.fillRect(artX - 10, artY - 10, artSize + 20, artSize + 20);
-  drawSprite(ctx, sheet, details.frame, artX, artY, artSize);
+  const pad = 14;
+  ctx.fillStyle = VEIL;
+  ctx.fillRect(artX - pad, top - pad, artSize + pad * 2, artSize + pad * 2);
+  drawSprite(ctx, sheet, frame, artX, top, artSize);
   ctx.strokeStyle = INK;
   ctx.lineWidth = 3;
-  ctx.strokeRect(artX - 10, artY - 10, artSize + 20, artSize + 20);
+  ctx.strokeRect(artX - pad, top - pad, artSize + pad * 2, artSize + pad * 2);
+  ctx.strokeStyle = LINE;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(artX - pad + 6, top - pad + 6, artSize + pad * 2 - 12, artSize + pad * 2 - 12);
+  return top + artSize + pad;
+}
 
-  let y = artY + artSize + 44;
+function paintRule(ctx, y) {
+  ctx.strokeStyle = LINE;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(MARGIN, y);
+  ctx.lineTo(W - MARGIN, y);
+  ctx.stroke();
+  ctx.strokeStyle = CINNABAR;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(W / 2 - 36, y);
+  ctx.lineTo(W / 2 + 36, y);
+  ctx.stroke();
+  return y;
+}
+
+function paintSection(ctx, label, body, y, opts) {
   ctx.textAlign = "left";
   ctx.fillStyle = CINNABAR;
-  ctx.font = '20px "Fusion Pixel 12px Prop zh-Hant", sans-serif';
-  ctx.fillText("本局評語", 56, y);
-  y += 30;
-  ctx.fillStyle = INK;
-  ctx.font = '20px "Fusion Pixel 12px Prop zh-Hant", sans-serif';
-  y = wrapText(ctx, details.epitaph, 56, y, W - 112, 28, 3) + 18;
-
-  if (details.quote) {
-    ctx.fillStyle = CINNABAR;
-    ctx.font = '20px "Fusion Pixel 12px Prop zh-Hant", sans-serif';
-    ctx.fillText("終章一句", 56, y);
-    y += 30;
-    ctx.fillStyle = MUTE;
-    ctx.font = '18px "Fusion Pixel 12px Prop zh-Hant", sans-serif';
-    y = wrapText(ctx, details.quote, 56, y, W - 112, 26, 3) + 18;
-  }
-
-  ctx.fillStyle = CINNABAR;
-  ctx.font = '20px "Fusion Pixel 12px Prop zh-Hant", sans-serif';
-  ctx.fillText("路途細節", 56, y);
-  y += 28;
-  ctx.fillStyle = MUTE;
-  ctx.font = '18px "Fusion Pixel 12px Prop zh-Hant", sans-serif';
-  y = wrapText(ctx, details.pathLabel, 56, y, W - 112, 26, 2) + 16;
-
-  ctx.fillStyle = INK;
-  ctx.font = '18px "Fusion Pixel 12px Prop zh-Hant", sans-serif';
-  for (const line of details.marks) {
-    y = wrapText(ctx, `· ${line}`, 56, y, W - 112, 26, 2) + 8;
-  }
-
-  y += 10;
-  ctx.fillStyle = CINNABAR;
-  ctx.font = '20px "Fusion Pixel 12px Prop zh-Hant", sans-serif';
-  ctx.fillText("囊中尚餘", 56, y);
-  y += 28;
-  ctx.fillStyle = MUTE;
-  ctx.font = '18px "Fusion Pixel 12px Prop zh-Hant", sans-serif';
-  wrapText(ctx, details.bag.length ? details.bag.join("　") : "空——兩袖清風，或兩袖塵土。", 56, y, W - 112, 26, 2);
-
-  ctx.textAlign = "center";
-  ctx.fillStyle = MUTE;
-  ctx.font = '18px "Fusion Pixel 12px Prop zh-Hant", sans-serif';
-  ctx.fillText("寒閣一遊 · 留作紀念", W / 2, H - 48);
-
-  return canvas;
+  ctx.font = `${opts.labelSize}px ${FONT}`;
+  ctx.fillText(label, MARGIN, y);
+  y += opts.labelSize + 12;
+  ctx.fillStyle = opts.bodyColor;
+  ctx.font = `${opts.bodySize}px ${FONT}`;
+  return wrapText(ctx, body, MARGIN, y, W - MARGIN * 2, opts.lineHeight, opts.maxRows);
 }
 
 function drawSprite(ctx, sheet, name, x, y, size) {
