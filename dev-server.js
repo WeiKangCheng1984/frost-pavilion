@@ -1,3 +1,4 @@
+// 檔名不用 server.js：Vercel 會把根目錄的 server.js 當成後端，靜態檔就不會送上去。
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
