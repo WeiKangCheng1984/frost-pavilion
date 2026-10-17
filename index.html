@@ -85,18 +85,20 @@
             </section>
           </aside>
         </div>
-
-        <nav class="dock" aria-label="主操作">
-          <button type="button" id="inspect">調查</button>
-          <button type="button" id="use">使用</button>
-          <div class="dock-nav">
-            <button type="button" id="retreat" hidden>上一段</button>
-            <button type="button" id="skip" hidden>跳過</button>
-            <button type="button" id="advance" class="btn-primary" hidden>繼續</button>
-          </div>
-          <button type="button" id="side-toggle" aria-expanded="false" aria-controls="play-side">囊</button>
-        </nav>
       </div>
+
+      <button type="button" id="sheet-scrim" class="sheet-scrim" hidden aria-label="關閉面板"></button>
+
+      <nav class="dock" id="dock" aria-label="主操作">
+        <button type="button" id="inspect">調查</button>
+        <button type="button" id="use">使用</button>
+        <div class="dock-nav">
+          <button type="button" id="retreat" hidden>上一段</button>
+          <button type="button" id="skip" hidden>跳過</button>
+          <button type="button" id="advance" class="btn-primary" hidden>繼續</button>
+        </div>
+        <button type="button" id="side-toggle" aria-expanded="false" aria-controls="play-side">囊</button>
+      </nav>
     </div>
 
     <div id="card-modal" class="card-modal" hidden>

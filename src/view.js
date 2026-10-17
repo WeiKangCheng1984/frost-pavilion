@@ -328,10 +328,14 @@ function paintSideChrome() {
   const toggle = document.querySelector("#side-toggle");
   const menu = document.querySelector("#menu");
   const menuToggle = document.querySelector("#menu-toggle");
+  const scrim = document.querySelector("#sheet-scrim");
+  const wide = window.matchMedia("(min-width: 720px)").matches;
   if (side) side.classList.toggle("is-open", sideOpen);
   if (toggle) toggle.setAttribute("aria-expanded", String(sideOpen));
+  if (scrim) scrim.hidden = wide || !sideOpen;
   if (menu) menu.hidden = !menuOpen;
   if (menuToggle) menuToggle.setAttribute("aria-expanded", String(menuOpen));
+  document.body.dataset.sheet = sideOpen && !wide ? "open" : "closed";
 }
 
 function openSide() {
@@ -721,6 +725,12 @@ function bindStatic() {
   document.querySelector("#side-toggle").addEventListener("click", () => {
     sideOpen = !sideOpen;
     paintSideChrome();
+  });
+  document.querySelector("#sheet-scrim")?.addEventListener("click", () => {
+    sideOpen = false;
+    inspectOpen = false;
+    paintSideChrome();
+    if (latest) repaint();
   });
   document.querySelector("#inspect").addEventListener("click", () => {
     if (!latest) return;

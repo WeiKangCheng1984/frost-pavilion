@@ -1,6 +1,7 @@
-function shellWidth() {
-  const wide = window.matchMedia("(min-width: 720px)").matches;
-  return wide ? 720 : 384;
+/** 版面寬度；不再對殼做 transform scale，以免 fixed 底欄／囊被困在縮放層。 */
+
+function isWide() {
+  return window.matchMedia("(min-width: 720px)").matches;
 }
 
 export function applyScale() {
@@ -8,28 +9,32 @@ export function applyScale() {
   const shell = document.querySelector("#shell");
   if (!fit || !shell || fit.hidden) return 1;
 
-  const logical = shellWidth();
+  const wide = isWide();
+  const logical = wide ? 720 : 384;
   document.documentElement.style.setProperty("--shell-w", `${logical}px`);
-  shell.style.width = `${logical}px`;
-  shell.style.transform = "scale(1)";
 
-  const height = shell.offsetHeight || 1;
-  const maxN = wideCap();
-  const n = Math.max(1, Math.min(
-    maxN,
-    Math.floor(document.documentElement.clientWidth / logical),
-    Math.floor(document.documentElement.clientHeight / Math.max(height * 0.92, 1))
-  ));
+  shell.style.transform = "none";
+  shell.style.width = "100%";
 
-  shell.style.transform = `scale(${n})`;
-  fit.style.width = `${logical * n}px`;
-  fit.style.height = `${Math.ceil(height * n)}px`;
-  fit.dataset.scale = String(n);
-  return n;
-}
+  if (wide) {
+    fit.style.width = "100%";
+    fit.style.maxWidth = `${logical}px`;
+    fit.style.height = "auto";
+    fit.style.marginLeft = "auto";
+    fit.style.marginRight = "auto";
+    document.documentElement.style.setProperty("--frame-w", `${logical}px`);
+  } else {
+    const frame = Math.min(logical, document.documentElement.clientWidth || logical);
+    fit.style.width = "100%";
+    fit.style.maxWidth = `${logical}px`;
+    fit.style.height = "auto";
+    fit.style.marginLeft = "auto";
+    fit.style.marginRight = "auto";
+    document.documentElement.style.setProperty("--frame-w", `${frame}px`);
+  }
 
-function wideCap() {
-  return window.matchMedia("(min-width: 720px)").matches ? 2 : 3;
+  fit.dataset.scale = "1";
+  return 1;
 }
 
 export function mountScale() {

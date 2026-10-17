@@ -62,6 +62,10 @@ body {
   background: var(--veil);
 }
 
+body[data-sheet="open"] {
+  overflow: hidden;
+}
+
 button,
 p,
 a,
@@ -182,11 +186,14 @@ button[aria-pressed="true"] {
 
 /* —— 殼 —— */
 #fit {
+  position: relative;
   margin: 0 auto;
-  padding-bottom: calc(var(--dock-h) + 12px);
+  padding-bottom: calc(var(--dock-h) + 12px + env(safe-area-inset-bottom, 0px));
+  overflow: visible;
 }
 
 #shell {
+  position: relative;
   width: var(--shell-w);
   transform-origin: top left;
   background: var(--paper);
@@ -194,6 +201,8 @@ button[aria-pressed="true"] {
   padding-bottom: 8px;
   border-left: 1px solid var(--ink);
   border-right: 1px solid var(--ink);
+  overflow: visible;
+  z-index: 1;
 }
 
 .top {
@@ -232,6 +241,8 @@ button[aria-pressed="true"] {
 .ending-kicker { color: var(--cinnabar); }
 
 .menu {
+  position: relative;
+  z-index: 5;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -396,20 +407,35 @@ button[aria-pressed="true"] {
   margin-top: 12px;
 }
 
-/* —— 底欄（手機拇指區）—— */
+/* —— 底欄／囊面板：放在 #shell 外，避免被 scale transform 困住 —— */
+.sheet-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-height: 0;
+  background: rgba(20, 17, 14, 0.5);
+  cursor: pointer;
+}
+
 .dock {
   position: fixed;
   left: 50%;
   bottom: 0;
   transform: translateX(-50%);
-  width: min(var(--shell-w), 100%);
-  z-index: 20;
+  width: var(--frame-w, min(384px, 100%));
+  max-width: 100%;
+  z-index: 60;
   padding: 8px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
   gap: 6px;
   background: var(--paper-deep);
   border-top: 1px solid var(--ink);
   justify-content: space-between;
   align-items: center;
+  box-sizing: border-box;
 }
 
 .dock > button { flex: 0 0 auto; min-width: 52px; }
@@ -424,34 +450,40 @@ button[aria-pressed="true"] {
   min-width: 72px;
 }
 
-/* 手機：側欄預設收合 */
+/* 手機：側欄自底欄上方浮出 */
 @media (max-width: 719px) {
   .play-side {
     display: none;
     position: fixed;
     left: 50%;
-    bottom: var(--dock-h);
+    bottom: calc(var(--dock-h) + env(safe-area-inset-bottom, 0px));
     transform: translateX(-50%);
-    width: min(var(--shell-w), 100%);
-    max-height: 42vh;
-    overflow: auto;
-    z-index: 19;
+    width: var(--frame-w, min(384px, 100%));
+    max-width: 100%;
+    max-height: min(52vh, 420px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    z-index: 50;
     background: var(--paper);
     border: 1px solid var(--ink);
     border-bottom: none;
-    box-shadow: 0 -4px 0 rgba(22, 18, 15, 0.08);
+    box-shadow: 0 -6px 0 rgba(22, 18, 15, 0.12);
+    box-sizing: border-box;
   }
 
   .play-side.is-open { display: block; }
 
-  #fit { padding-bottom: calc(var(--dock-h) + 16px); }
+  #fit { padding-bottom: calc(var(--dock-h) + 20px + env(safe-area-inset-bottom, 0px)); }
 }
 
-/* 桌機／寬板：雙欄 */
+/* 桌機／寬板：雙欄；底欄回到版面流 */
 @media (min-width: 720px) {
   :root { --shell-w: 720px; }
 
   #fit { padding-bottom: 16px; }
+
+  .sheet-scrim { display: none !important; }
 
   .play-grid {
     display: grid;
@@ -470,21 +502,25 @@ button[aria-pressed="true"] {
     position: static;
     transform: none;
     max-height: none;
+    overflow: visible;
     border-top: none;
     border-left: none;
     box-shadow: none;
     padding-top: 12px;
+    width: auto;
   }
 
   #side-toggle { display: none; }
 
   .dock {
-    position: sticky;
-    bottom: 0;
+    position: relative;
     left: auto;
+    bottom: auto;
     transform: none;
     width: 100%;
-    margin-top: 8px;
+    max-width: none;
+    margin-top: 0;
+    z-index: 2;
   }
 
   #scene { max-width: none; }
