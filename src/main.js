@@ -59,5 +59,5 @@ function frame(now) {
 paintMute(audio.muted);
 render(state, send);
 mountScale();
-mountTextSize();
+mountTextSize(() => send({ type: "skipToFinale" }));
 window.requestAnimationFrame(frame);

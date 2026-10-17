@@ -1,5 +1,6 @@
 import { acupoints, elements, endingNames, herbs, hints, items, koMoves, lines, passages, trigrams, verses } from "./content.js";
 import { endingKickerId, endingPageIds } from "./endings.js";
+import { glanceOpen } from "./reduce.js";
 import { loadSprites, onSprites, paintStage } from "./sprites.js";
 
 const PHASES = {
@@ -97,6 +98,8 @@ export function render(state, send) {
       scaleReady: state.flags.scaleReady,
       ending: state.ending
     },
+    pending: state.pending,
+    glance: state.log?.[0] ?? "",
     selected,
     focus,
     inspectOpen,
@@ -125,6 +128,7 @@ function clearPassage(state) {
 function pageIdsFor(state) {
   if (state.phase === "ending") return endingPageIds(state.ending, state);
   if (state.flags.letterOpen) return passages.letter;
+  if (state.beat === "cheat") return ["cheat.joke"];
   if (state.beat === "prologue") return passages.prologue;
   if (state.beat === "enter") return passages.enter[state.phase];
   if (state.beat === "clear") return clearPassage(state);
@@ -182,13 +186,17 @@ function paintSpeech() {
   skip.hidden = speech.done || !speech.key;
   paintAdvance();
   paintRetreat();
+  if (speech.done && latest?.state?.ending) paintRestart(latest.state, true);
 }
 
 function passageLabel(state) {
+  if (glanceOpen(state) && state.phase === 7 && state.beat === "play" && !state.flags.letterOpen) {
+    return "繼續";
+  }
   const ids = pageIdsFor(state);
   if (!ids) return "";
   if (state.phase === "ending") {
-    return state.page >= ids.length - 1 ? "" : "繼續";
+    return state.page >= ids.length - 1 ? "" : "下一段";
   }
   if (state.flags.letterOpen) {
     return state.page >= ids.length - 1 ? "合上" : "繼續";
@@ -242,6 +250,8 @@ function paintChrome() {
   document.querySelector(".verbs").hidden = ended || !inPlay;
   document.querySelector("#hint").hidden = ended;
   paintRestart(state, ended);
+  const use = document.querySelector("#use");
+  if (use) use.disabled = !inPlay || Boolean(state.pending) || glanceOpen(state);
   document.querySelector("#close-letter").hidden = true;
   document.querySelector("#debug-skip").hidden = !debug || ended || !state.timer?.running;
 
@@ -302,6 +312,7 @@ function paintTimer(state) {
 }
 
 function sceneFor(state) {
+  if (state.beat === "cheat") return { center: "wall", row: [] };
   if (state.ending === "wolf") return { center: "baihu", row: [] };
   if (state.ending === "flee") return { center: "qinglong", row: [] };
   if (state.ending === "sever") return { center: "pill", row: ["elder"] };
@@ -334,7 +345,7 @@ function paintScene(state) {
 
 function progressText(state) {
   if (state.flags.letterOpen) return "信還攤在手上。";
-  if (state.beat === "prologue" || state.beat === "enter" || state.beat === "clear") return "這段還沒說完。";
+  if (state.beat === "cheat" || state.beat === "prologue" || state.beat === "enter" || state.beat === "clear") return "這段還沒說完。";
   if (state.beat === "offer" && state.phase === 5) return "碗底還留著餘膏。";
   if (state.beat === "offer" && state.phase === 6) return "短刃還掛在屏風旁。";
   if (state.phase >= 1 && state.phase <= 4) {
@@ -396,7 +407,7 @@ function paintBag(state, send) {
 
 function paintHint(state) {
   const hint = document.querySelector("#hint");
-  if (state.beat === "prologue" || state.beat === "enter" || state.beat === "clear") {
+  if (state.beat === "cheat" || state.beat === "prologue" || state.beat === "enter" || state.beat === "clear") {
     hint.textContent = hints.passage;
     return;
   }
@@ -561,14 +572,19 @@ function paintOffer(parent, offer, yesLabel, noLabel, send) {
 }
 
 function paintFinale(parent, state, send) {
+  if (glanceOpen(state)) return;
+  if (state.pending) {
+    paintOffer(parent, "finale", "就這樣", "先不", send);
+    return;
+  }
   const ready = state.flags.introDone;
   addAction(parent, "白虎石", ready, () => {
     focus = null;
-    send({ type: "submit", puzzleId: "ending", choice: "baihu" });
+    send({ type: "propose", choice: "baihu" });
   });
   addAction(parent, "青龍石", ready, () => {
     focus = null;
-    send({ type: "submit", puzzleId: "ending", choice: "qinglong" });
+    send({ type: "propose", choice: "qinglong" });
   });
 }
 
@@ -604,9 +620,10 @@ export function paintMute(muted) {
 function bindStatic() {
   document.querySelector("#skip").addEventListener("click", finishSpeech);
   document.querySelector("#advance").addEventListener("click", () => {
-    if (!speech.done) return;
+    if (!speech.done || !latest) return;
     focus = null;
-    latest?.send({ type: "advance" });
+    if (glanceOpen(latest.state)) latest.send({ type: "acknowledge" });
+    else latest.send({ type: "advance" });
   });
   document.querySelector("#retreat").addEventListener("click", () => {
     if (!speech.done) return;
@@ -630,7 +647,13 @@ function bindStatic() {
     repaint();
   });
   document.querySelector("#use").addEventListener("click", () => {
-    latest?.send({ type: "useItem", itemId: selected });
+    if (!latest || document.querySelector("#use").disabled) return;
+    const choice = selected === "blade" ? "blade" : selected === "pill" ? "pill" : selected === "acid_smear" ? "smear" : "";
+    if (latest.state.phase === 7 && choice) {
+      latest.send({ type: "propose", choice });
+      return;
+    }
+    latest.send({ type: "useItem", itemId: selected });
   });
   document.querySelector("#close-letter").addEventListener("click", () => {
     focus = null;

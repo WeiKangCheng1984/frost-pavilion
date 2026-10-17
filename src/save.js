@@ -7,7 +7,7 @@ const ITEM_IDS = new Set(Object.keys(items));
 const ENDINGS = new Set(Object.keys(endingNames));
 const SWORD_IDS = ["lineA", "lineB", "lineC", "lineD"];
 const FLAG_KEYS = ["letterRead", "smearOffered", "pillPlaced", "chainsFreed", "introDone", "bladeOffered", "letterOpen", "needleReady", "scaleReady"];
-const BEATS = new Set(["prologue", "enter", "play", "clear", "offer", "ending"]);
+const BEATS = new Set(["prologue", "enter", "play", "clear", "offer", "ending", "cheat"]);
 
 export function loadSave(storage) {
   let raw;
@@ -60,6 +60,7 @@ function validState(data) {
   if (!data.flags || FLAG_KEYS.some((key) => typeof data.flags[key] !== "boolean")) return false;
   if (!validSequences(data.sequences)) return false;
   if (!validTimer(data.timer, data.phase)) return false;
+  if (data.pending != null && typeof data.pending !== "string") return false;
   if (!Array.isArray(data.log) || data.log.length > 4) return false;
   if (data.log.some((id) => typeof id !== "string")) return false;
   return true;

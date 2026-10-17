@@ -30,13 +30,29 @@ export function initialState() {
     },
     timer: null,
     ending: null,
+    pending: null,
     log: [passages.prologue[0]]
   };
 }
 
+const GLANCE = new Set([
+  "bagua.poem",
+  "wuxing.poem",
+  "brew.herbs",
+  "brew.scroll",
+  "ko.hint",
+  "inspect.barren"
+]);
+
+export function glanceOpen(state) {
+  const id = state.log?.[0];
+  if (typeof id !== "string") return false;
+  return id.endsWith(".inspect") || GLANCE.has(id);
+}
+
 export function reduce(state, action) {
   if (!action || typeof action.type !== "string") return state;
-  if (state.ending && action.type !== "restart") return state;
+  if (state.ending && !["restart", "advance", "retreat", "skipToFinale"].includes(action.type)) return state;
 
   switch (action.type) {
     case "inspect":
@@ -69,6 +85,12 @@ export function reduce(state, action) {
       return reveal(state);
     case "tick":
       return tick(state, action.ms);
+    case "acknowledge":
+      return acknowledge(state);
+    case "propose":
+      return propose(state, action.choice);
+    case "skipToFinale":
+      return skipToFinale();
     case "restart":
       return initialState();
     default:
@@ -106,6 +128,7 @@ function clearPassage(state) {
 function pageIds(state) {
   if (state.phase === "ending") return endingPageIds(state.ending, state);
   if (state.flags.letterOpen) return passages.letter;
+  if (state.beat === "cheat") return ["cheat.joke"];
   if (state.beat === "prologue") return passages.prologue;
   if (state.beat === "enter") return passages.enter[state.phase];
   if (state.beat === "clear") return clearPassage(state);
@@ -136,11 +159,25 @@ function advance(state) {
     const page = state.page + 1;
     return { ...state, page, log: [ids[page]] };
   }
+  if (state.ending) return state;
   if (state.flags.letterOpen) return closeLetter(state);
   return finishPassage(state);
 }
 
 function finishPassage(state) {
+  if (state.beat === "cheat") {
+    return {
+      ...state,
+      beat: "play",
+      page: 0,
+      flags: { ...state.flags, introDone: true },
+      timer: {
+        ...state.timer,
+        running: !state.timer.pausedByLetter && !state.timer.pausedByHidden
+      },
+      log: ["finale.hold"]
+    };
+  }
   if (state.beat === "prologue") return beginEnter(state, 1);
   if (state.beat === "enter" && state.phase === 7) {
     return {
@@ -301,6 +338,7 @@ function submitSword(state) {
 }
 
 function submitEnding(state, choice) {
+  if (decisionSealed(state)) return state;
   if (state.phase !== 7 || !state.flags.introDone) return state;
   const ending = resolveEnding(state, choice);
   if (!ending) return state;
@@ -311,7 +349,63 @@ function offerAnswer(state, offer, answer) {
   if (answer !== "yes" && answer !== "no") return state;
   if (offer === "smear") return answerSmear(state, answer);
   if (offer === "blade") return answerBlade(state, answer);
+  if (offer === "finale") return answerFinale(state, answer);
   return state;
+}
+
+function decisionSealed(state) {
+  return Boolean(state.pending) || glanceOpen(state);
+}
+
+function askLine(state, choice) {
+  if (choice === "baihu") return "finale.ask.baihu";
+  if (choice === "blade") return "finale.ask.blade";
+  if (choice === "pill") return "finale.ask.pill";
+  if (choice === "smear") return "finale.ask.smear";
+  if (state.flags.chainsFreed) return "finale.ask.qinglong.chains";
+  if (state.flags.pillPlaced) return "finale.ask.qinglong.pill";
+  return "finale.ask.qinglong";
+}
+
+function propose(state, choice) {
+  if (!playing(state) || state.phase !== 7 || !state.flags.introDone) return state;
+  if (decisionSealed(state)) return state;
+  if (choice !== "baihu" && choice !== "qinglong" && choice !== "blade" && choice !== "pill" && choice !== "smear") return state;
+  if (choice === "blade" && !has(state, "blade")) return state;
+  if (choice === "pill" && !has(state, "pill")) return state;
+  if (choice === "smear" && !has(state, "acid_smear")) return state;
+  return { ...state, pending: choice, log: [askLine(state, choice)] };
+}
+
+function answerFinale(state, answer) {
+  if (!state.pending || state.phase !== 7) return state;
+  const choice = state.pending;
+  const cleared = { ...state, pending: null };
+  if (answer === "no") return { ...cleared, log: ["finale.hold"] };
+  if (choice === "baihu") return submitEnding(cleared, "baihu");
+  if (choice === "qinglong") return submitEnding(cleared, "qinglong");
+  if (choice === "blade") return useBlade(cleared);
+  if (choice === "pill") return placePill(cleared);
+  if (choice === "smear") return freeChains(cleared);
+  return cleared;
+}
+
+function acknowledge(state) {
+  if (!playing(state) || !glanceOpen(state)) return state;
+  return { ...state, log: ["finale.hold"] };
+}
+
+function skipToFinale() {
+  const next = initialState();
+  return {
+    ...next,
+    phase: 7,
+    beat: "cheat",
+    inventory: ["letter", "pill", "acid_smear", "blade"],
+    flags: { ...next.flags, smearOffered: true, bladeOffered: true },
+    timer: { remainingMs: timerMs, running: false, pausedByLetter: false, pausedByHidden: false },
+    log: ["cheat.joke"]
+  };
 }
 
 function answerSmear(state, answer) {
@@ -367,11 +461,13 @@ function useScale(state) {
 }
 
 function useBlade(state) {
+  if (decisionSealed(state)) return state;
   if (state.phase !== 7 || !state.flags.introDone) return { ...state, log: ["blade.early"] };
   return submitEnding(state, "blade");
 }
 
 function placePill(state) {
+  if (decisionSealed(state)) return state;
   if (!playing(state) || !has(state, "pill")) return state;
   if (state.phase !== 7 || !state.flags.introDone) return { ...state, log: ["pill.early"] };
   return {
@@ -383,6 +479,7 @@ function placePill(state) {
 }
 
 function freeChains(state) {
+  if (decisionSealed(state)) return state;
   if (!playing(state) || !has(state, "acid_smear")) return state;
   if (state.phase !== 7 || !state.flags.introDone) return { ...state, log: ["smear.early"] };
   return {
@@ -463,6 +560,7 @@ function applyEnding(state, ending) {
     phase: "ending",
     beat: "ending",
     page: 0,
+    pending: null,
     ending,
     timer: state.timer
       ? {

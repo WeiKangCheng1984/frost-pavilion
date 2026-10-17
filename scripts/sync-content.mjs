@@ -10,7 +10,7 @@ for (const chunk of chunks) {
   const nl = chunk.indexOf("\n");
   const id = chunk.slice(0, nl).trim();
   if (!id || id.startsWith("items") || id.startsWith("verses") || id.startsWith("koMoves") || id.startsWith("herbs") || id.startsWith("endings")) continue;
-  const body = chunk.slice(nl + 1).trim();
+  const body = chunk.slice(nl + 1).split(/^# /m)[0].trim();
   if (!body || body.startsWith("- ")) continue;
   const text = body.split("\n").filter((line) => line.trim()).join("\n");
   lines[id] = text.includes("\n") ? text.split("\n") : [text];

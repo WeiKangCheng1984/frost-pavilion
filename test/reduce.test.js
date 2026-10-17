@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { sword, verses } from "../src/content.js";
 import { endingLineId, endingPageIds, resolveEnding } from "../src/endings.js";
-import { initialState, reduce } from "../src/reduce.js";
+import { glanceOpen, initialState, reduce } from "../src/reduce.js";
+import { nextCheatStep } from "../src/textSize.js";
 
 const ALLOWED = new Set(["needle", "letter", "scale", "pill", "acid_smear", "blade"]);
 
@@ -318,6 +319,76 @@ test("鐵鏈已化開，再按白虎仍是孤狼飲血", () => {
   state = reduce(state, { type: "useItem", itemId: "acid_smear" });
   state = reduce(state, { type: "submit", puzzleId: "ending", choice: "baihu" });
   assert.equal(state.ending, "wolf");
+});
+
+test("調查道具時不能結算，放下之後才行", () => {
+  let state = ready();
+  state = reduce(state, { type: "inspect", target: "pill" });
+  assert.equal(glanceOpen(state), true);
+  const blocked = reduce(state, { type: "submit", puzzleId: "ending", choice: "baihu" });
+  assert.equal(blocked, state);
+  state = reduce(state, { type: "acknowledge" });
+  assert.equal(glanceOpen(state), false);
+  state = reduce(state, { type: "submit", puzzleId: "ending", choice: "baihu" });
+  assert.equal(state.ending, "wolf");
+});
+
+test("結局可以翻完三頁，最後一頁不再往下", () => {
+  let state = reduce(ready(), { type: "submit", puzzleId: "ending", choice: "baihu" });
+  assert.equal(state.page, 0);
+  assert.equal(state.log[0], "ending.wolf.unread.a");
+  state = reduce(state, { type: "advance" });
+  assert.equal(state.page, 1);
+  assert.equal(state.ending, "wolf");
+  state = reduce(state, { type: "advance" });
+  assert.equal(state.page, 2);
+  const held = reduce(state, { type: "advance" });
+  assert.equal(held.page, 2);
+  assert.equal(held.ending, "wolf");
+  const back = reduce(held, { type: "retreat" });
+  assert.equal(back.page, 1);
+});
+
+test("第七關決定要先確認，先不就回到石頭前", () => {
+  let state = reduce(ready(), { type: "propose", choice: "baihu" });
+  assert.equal(state.ending, null);
+  assert.equal(state.pending, "baihu");
+  state = reduce(state, { type: "offerAnswer", offer: "finale", answer: "no" });
+  assert.equal(state.pending, null);
+  assert.equal(state.ending, null);
+  state = reduce(state, { type: "propose", choice: "baihu" });
+  state = reduce(state, { type: "offerAnswer", offer: "finale", answer: "yes" });
+  assert.equal(state.ending, "wolf");
+  assert.equal(state.pending, null);
+});
+
+test("字級暗門大大大中中中小小小進入第七關", () => {
+  const code = ["l", "l", "l", "m", "m", "m", "s", "s", "s"];
+  let step = 0;
+  let fired = false;
+  for (const size of code) {
+    const next = nextCheatStep(step, size);
+    step = next.step;
+    fired = next.fired;
+  }
+  assert.equal(fired, true);
+  const wrong = nextCheatStep(0, "s");
+  assert.equal(wrong.fired, false);
+  let state = reduce(initialState(), { type: "skipToFinale" });
+  assert.equal(state.phase, 7);
+  assert.equal(state.beat, "cheat");
+  assert.equal(state.log[0], "cheat.joke");
+  assert.equal(state.flags.introDone, false);
+  assert.equal(state.timer.running, false);
+  state = reduce(state, { type: "advance" });
+  assert.equal(state.beat, "play");
+  assert.equal(state.flags.introDone, true);
+  assert.equal(state.timer.running, true);
+  assert.equal(state.ending, null);
+  assert.ok(state.inventory.includes("pill"));
+  assert.ok(state.inventory.includes("blade"));
+  assert.ok(state.inventory.includes("acid_smear"));
+  assert.ok(state.inventory.includes("letter"));
 });
 
 test("結局寫入後，再提交不會改結局", () => {
