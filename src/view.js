@@ -1,4 +1,4 @@
-import { acupoints, elements, endingNames, herbs, items, lines, passages, puzzles, trigrams, verses } from "./content.js";
+import { acupoints, elements, endingNames, herbs, hints, items, koMoves, lines, passages, trigrams, verses } from "./content.js";
 import { loadSprites, onSprites, paintStage } from "./sprites.js";
 
 const PHASES = {
@@ -25,12 +25,11 @@ const INSPECTS = {
   ]
 };
 
-const KO_LABELS = { ko: "劫", eye: "做眼", snapback: "倒撲", seki: "雙活" };
-
 const LABELS = Object.fromEntries([
   ...trigrams.map((item) => [item.id, item.label]),
   ...acupoints.map((item) => [item.id, item.label]),
-  ...elements.map((item) => [item.id, item.label])
+  ...elements.map((item) => [item.id, item.label]),
+  ...koMoves.map((item) => [item.id, item.label])
 ]);
 
 const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -44,6 +43,7 @@ let chromeKey = "";
 let speech = { key: "", rows: [], count: 0, done: true, timer: 0 };
 let brewForm = emptyBrew();
 let focus = null;
+let selected = null;
 
 const TARGET_FRAMES = {
   compass: "compass",
@@ -63,9 +63,14 @@ const TARGET_FRAMES = {
 
 export function render(state, send) {
   latest = { state, send };
+  if (selected && !state.inventory.includes(selected)) {
+    selected = null;
+    focus = null;
+  }
   if (state.phase !== openPhase) {
     inspectOpen = false;
     focus = null;
+    selected = null;
     if (state.phase === 5) brewForm = emptyBrew();
     openPhase = state.phase;
   }
@@ -85,8 +90,11 @@ export function render(state, send) {
       pillPlaced: state.flags.pillPlaced,
       chainsFreed: state.flags.chainsFreed,
       letterOpen: state.flags.letterOpen,
+      needleReady: state.flags.needleReady,
+      scaleReady: state.flags.scaleReady,
       ending: state.ending
     },
+    selected,
     focus,
     inspectOpen,
     brewForm
@@ -106,9 +114,7 @@ function emptyBrew() {
 function rowsFrom(ids) {
   const rows = [];
   for (const id of ids) {
-    for (const row of lines[id] ?? []) {
-      if (rows.length < 4) rows.push(row);
-    }
+    for (const row of lines[id] ?? []) rows.push(row);
   }
   return rows;
 }
@@ -148,11 +154,12 @@ function paintSpeech() {
   speechPaint = mark;
   const shown = speech.key.slice(0, speech.count).split("\n");
   speechEl.replaceChildren();
-  for (let i = 0; i < 4; i += 1) {
+  for (const text of shown) {
     const line = document.createElement("p");
-    line.textContent = shown[i] ?? "";
+    line.textContent = text;
     speechEl.append(line);
   }
+  speechEl.scrollTop = speechEl.scrollHeight;
   skip.hidden = speech.done || !speech.key;
   paintAdvance();
 }
@@ -195,7 +202,7 @@ function paintChrome() {
 
   const inPlay = state.beat === "play" && !state.flags.letterOpen;
   document.querySelector(".bag-wrap").hidden = ended;
-  document.querySelector(".verbs").hidden = ended || !inPlay || state.phase === 7;
+  document.querySelector(".verbs").hidden = ended || !inPlay;
   document.querySelector("#hint").hidden = ended;
   document.querySelector("#restart").hidden = !ended;
   document.querySelector("#close-letter").hidden = ended || !state.flags.letterOpen;
@@ -265,20 +272,19 @@ function progressText(state) {
   if (state.beat === "prologue" || state.beat === "enter" || state.beat === "clear") return "這段還沒說完。";
   if (state.beat === "offer" && state.phase === 5) return "碗底還留著餘膏。";
   if (state.beat === "offer" && state.phase === 6) return "短刃還掛在屏風旁。";
-  if (state.phase >= 1 && state.phase <= 3) {
+  if (state.phase >= 1 && state.phase <= 4) {
     const sequence = currentSequence(state);
     if (sequence.length === 0) return "尚未按下。";
     return `已按 ${sequence.map((id) => LABELS[id] ?? id).join("、")}`;
   }
-  if (state.phase === 4) return "選一個手法。";
   if (state.phase === 5) return doseSummary();
   if (state.phase === 6) return "排好四句再提交。";
   if (state.ending) return endingNames[state.ending];
   if (!state.flags.introDone) return "開場未完，倒數未走。";
   if (state.timer?.pausedByLetter) return "讀信時，香暫停。";
-  if (state.flags.chainsFreed) return "鐵鏈已開，青龍才能同行。";
-  if (state.flags.pillPlaced) return "丹已放下，青龍即可離開。";
-  return "白虎地火，青龍出門。";
+  if (state.flags.chainsFreed) return "鐵鏈已開。青龍石才是兩人一起走的門。";
+  if (state.flags.pillPlaced) return "丹已留在他手邊。青龍石是你一個人走的門。";
+  return "白虎是地火。青龍是出門。囊裡的東西要先使用。";
 }
 
 function doseSummary() {
@@ -296,6 +302,7 @@ function currentSequence(state) {
   if (state.phase === 1) return state.sequences.bagua;
   if (state.phase === 2) return state.sequences.acupoint;
   if (state.phase === 3) return state.sequences.wuxing;
+  if (state.phase === 4) return state.sequences.ko;
   return [];
 }
 
@@ -312,10 +319,11 @@ function paintBag(state, send) {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = items[id] ?? id;
+    button.setAttribute("aria-pressed", String(selected === id));
     button.addEventListener("click", () => {
-      focus = id;
-      send(id === "letter" ? { type: "openLetter" } : { type: "inspect", target: id });
-      paintScene(latest.state);
+      selected = selected === id ? null : id;
+      focus = selected;
+      repaint();
     });
     bag.append(button);
   }
@@ -324,33 +332,32 @@ function paintBag(state, send) {
 function paintHint(state) {
   const hint = document.querySelector("#hint");
   if (state.beat === "prologue" || state.beat === "enter" || state.beat === "clear") {
-    hint.textContent = "先看完這段。";
+    hint.textContent = hints.passage;
     return;
   }
   if (state.flags.letterOpen) {
-    hint.textContent = "信可以合上，倒數會再走。";
+    hint.textContent = hints.letter;
     return;
   }
   if (state.beat === "offer" && state.phase === 5) {
-    hint.textContent = "先決定要不要刮碗。";
+    hint.textContent = hints.smear;
     return;
   }
   if (state.beat === "offer") {
-    hint.textContent = "短刃可取，也可留。";
+    hint.textContent = hints.blade;
     return;
   }
-  if (state.phase === 1) hint.textContent = "點卦符。調查可看方位。";
+  if (state.phase === 1) hint.textContent = hints.bagua;
   else if (state.phase === 2) {
-    hint.textContent = state.inventory.includes("needle")
-      ? "銀針在背包裡。由上到下點穴。"
-      : "口袋裡沒有銀針。";
-  } else if (state.phase === 3) hint.textContent = "踩錯會重來。壁上刻字可調查。";
-  else if (state.phase === 4) hint.textContent = "先調查棋盤，再選手法。";
-  else if (state.phase === 5) hint.textContent = "調查殘卷。份數選好再提交。";
-  else if (state.phase === 6) hint.textContent = "上下移動句子，再提交。";
-  else if (!state.flags.introDone) hint.textContent = "開場結束後，石頭才有反應。";
-  else if (!state.inventory.includes("blade")) hint.textContent = "沒有短刃，不能揮刀。";
-  else hint.textContent = "石頭、丹、餘膏，選一件做完。";
+    if (!state.inventory.includes("needle")) hint.textContent = hints.needleMissing;
+    else if (!state.flags.needleReady) hint.textContent = hints.needleSheathed;
+    else hint.textContent = hints.needleReady;
+  } else if (state.phase === 3) hint.textContent = hints.wuxing;
+  else if (state.phase === 4) hint.textContent = hints.ko;
+  else if (state.phase === 5) hint.textContent = hints.brew;
+  else if (state.phase === 6) hint.textContent = hints.sword;
+  else if (!state.flags.introDone) hint.textContent = hints.finaleLocked;
+  else hint.textContent = hints.finale;
 }
 
 function paintInspect(state, send) {
@@ -387,7 +394,7 @@ function paintPuzzle(state, send) {
   if (state.phase === 1) appendChoices(puzzle, trigrams, "bagua", new Set(state.sequences.bagua), send);
   else if (state.phase === 2) appendChoices(puzzle, acupoints, "acupoint", new Set(state.sequences.acupoint), send);
   else if (state.phase === 3) appendChoices(puzzle, elements, "wuxing", new Set(state.sequences.wuxing), send);
-  else if (state.phase === 4) paintKo(puzzle, send);
+  else if (state.phase === 4) appendChoices(puzzle, koMoves, "ko", new Set(state.sequences.ko), send);
   else if (state.phase === 5) paintBrew(puzzle);
   else if (state.phase === 6) paintSword(puzzle, state, send);
   else paintFinale(puzzle, state, send);
@@ -402,19 +409,6 @@ function appendChoices(parent, choices, puzzleId, pressed, send) {
     button.addEventListener("click", () => {
       focus = null;
       send({ type: "sequencePush", puzzleId, token: choice.id });
-    });
-    parent.append(button);
-  }
-}
-
-function paintKo(parent, send) {
-  for (const id of puzzles.ko.options) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = KO_LABELS[id] ?? id;
-    button.addEventListener("click", () => {
-      focus = null;
-      send({ type: "submit", puzzleId: "ko", choice: id });
     });
     parent.append(button);
   }
@@ -511,24 +505,6 @@ function paintFinale(parent, state, send) {
     focus = null;
     send({ type: "submit", puzzleId: "ending", choice: "qinglong" });
   });
-  if (state.inventory.includes("blade")) {
-    addAction(parent, "揮刀", ready, () => {
-      focus = null;
-      send({ type: "submit", puzzleId: "ending", choice: "blade" });
-    });
-  }
-  if (state.inventory.includes("pill")) {
-    addAction(parent, "放下丹", ready, () => {
-      focus = null;
-      send({ type: "placePill" });
-    });
-  }
-  if (state.inventory.includes("acid_smear")) {
-    addAction(parent, "化開鐵鏈", ready, () => {
-      focus = null;
-      send({ type: "freeChains" });
-    });
-  }
 }
 
 function addAction(parent, label, enabled, onClick) {
@@ -542,10 +518,10 @@ function addAction(parent, label, enabled, onClick) {
 
 function paintSubmit(state) {
   const submit = document.querySelector("#submit");
-  const brewing = state.beat === "play" && state.phase === 5;
-  const sorting = state.beat === "play" && state.phase === 6;
-  submit.disabled = !(brewing || sorting);
-  submit.title = submit.disabled ? "這一關不用這個鈕" : "送出這一關";
+  const show = state.beat === "play" && !state.flags.letterOpen && (state.phase === 5 || state.phase === 6);
+  submit.hidden = !show;
+  submit.disabled = !show;
+  submit.title = show ? "送出這一關" : "";
 }
 
 function repaint() {
@@ -569,12 +545,22 @@ function bindStatic() {
   });
   document.querySelector("#speech").addEventListener("click", finishSpeech);
   document.querySelector("#inspect").addEventListener("click", () => {
+    if (!latest) return;
+    if (selected) {
+      focus = selected;
+      latest.send({ type: "inspect", target: selected });
+      return;
+    }
+    const targets = INSPECTS[latest.state.phase] ?? [];
+    if (targets.length === 0) {
+      latest.send({ type: "inspect", target: "barren" });
+      return;
+    }
     inspectOpen = !inspectOpen;
     repaint();
   });
   document.querySelector("#use").addEventListener("click", () => {
-    const puzzle = document.querySelector("#puzzle button:not(:disabled)");
-    if (puzzle) puzzle.focus();
+    latest?.send({ type: "useItem", itemId: selected });
   });
   document.querySelector("#close-letter").addEventListener("click", () => {
     focus = null;

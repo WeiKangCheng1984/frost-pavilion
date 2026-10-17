@@ -148,7 +148,6 @@ h1 { font-size: 24px; }
 .kicker,
 .progress,
 .hint,
-#speech p,
 .license p { line-height: 12px; }
 
 .progress { min-height: 12px; }
@@ -157,15 +156,20 @@ h1 { font-size: 24px; }
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 8px;
-  align-items: end;
-  min-height: 48px;
+  align-items: start;
+  min-height: 72px;
   padding-top: 8px;
   padding-bottom: 8px;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
 
-#speech { margin: 0; }
+#speech {
+  margin: 0;
+  max-height: 160px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 
 .speech-actions {
   display: flex;
@@ -174,9 +178,12 @@ h1 { font-size: 24px; }
 }
 
 #speech p {
-  margin: 0;
-  min-height: 12px;
+  margin: 0 0 8px;
+  min-height: 16px;
+  line-height: 16px;
 }
+
+#speech p:last-child { margin-bottom: 0; }
 
 .bag-wrap { padding-top: 8px; padding-bottom: 8px; }
 

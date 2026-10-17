@@ -22,12 +22,14 @@ function solve(state) {
   if (state.phase === 1) {
     for (const token of ["zhen", "dui", "kan"]) state = reduce(state, { type: "sequencePush", puzzleId: "bagua", token });
   } else if (state.phase === 2) {
-    for (const token of ["shanzhong", "jiuwei", "qihai"]) state = reduce(state, { type: "sequencePush", puzzleId: "acupoint", token });
+    state = reduce(state, { type: "useItem", itemId: "needle" });
+    for (const token of ["qihai", "shanzhong", "jiuwei"]) state = reduce(state, { type: "sequencePush", puzzleId: "acupoint", token });
   } else if (state.phase === 3) {
     for (const token of ["wood", "earth", "water", "fire"]) state = reduce(state, { type: "sequencePush", puzzleId: "wuxing", token });
   } else if (state.phase === 4) {
-    state = reduce(state, { type: "submit", puzzleId: "ko", choice: "ko" });
+    for (const token of ["take", "retake", "elsewhere", "fill"]) state = reduce(state, { type: "sequencePush", puzzleId: "ko", token });
   } else if (state.phase === 5) {
+    state = reduce(state, { type: "useItem", itemId: "scale" });
     state = reduce(state, { type: "submit", puzzleId: "brew", recipe: { hongre: 2, hanyin: 1, qingre: 0, xuelian: 0, setAsideSnow: false } });
   } else if (state.phase === 6) {
     state = reduce(state, { type: "sequenceReorder", order: ["lineA", "lineB", "lineC", "lineD"] });

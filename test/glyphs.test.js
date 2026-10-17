@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { test } from "node:test";
 import zlib from "node:zlib";
-import { acupoints, elements, endingNames, herbs, items, lines, trigrams, verses } from "../src/content.js";
+import { acupoints, elements, endingNames, herbs, hints, items, koMoves, lines, trigrams, verses } from "../src/content.js";
 
 const FONT = new URL("../assets/fonts/fusion-pixel-12px-proportional-zh_hant.otf.woff", import.meta.url);
 
@@ -23,7 +23,9 @@ test("劇本用字都在 Fusion Pixel 繁體裡", () => {
     ...trigrams.map((item) => item.label),
     ...acupoints.map((item) => item.label),
     ...elements.map((item) => item.label),
-    ...herbs.flatMap((item) => [item.name, item.tag])
+    ...herbs.flatMap((item) => [item.name, item.tag]),
+    ...koMoves.map((item) => item.label),
+    ...Object.values(hints)
   ];
   for (const text of labels) {
     for (const ch of text) {
@@ -33,13 +35,19 @@ test("劇本用字都在 Fusion Pixel 繁體裡", () => {
   assert.deepEqual(missing, []);
 });
 
-test("失敗句只說沒有通過", () => {
-  assert.equal(lines["bagua.fail"].some((row) => row.includes("震")), false);
-  assert.equal(lines["acupoint.fail"].some((row) => row.includes("膻中")), false);
-  assert.equal(lines["wuxing.fail"].some((row) => row.includes("木困")), false);
-  assert.equal(lines["ko.fail"].some((row) => row.includes("劫")), false);
-  assert.equal(lines["brew.fail"].some((row) => row.includes("紅熱")), false);
-  assert.equal(lines["sword.fail"].some((row) => row.includes("冤")), false);
+test("失敗句不把正確序列念出來", () => {
+  const joined = (id) => lines[id].join("");
+  assert.equal(joined("bagua.fail").includes("震"), false);
+  assert.equal(joined("acupoint.fail").includes("膻中"), false);
+  assert.equal(joined("acupoint.fail").includes("氣海"), false);
+  assert.equal(joined("acupoint.fail").includes("鳩尾"), false);
+  assert.equal(joined("wuxing.fail").includes("木困"), false);
+  assert.equal(joined("ko.fail").includes("別處"), false);
+  assert.equal(joined("ko.fail").includes("劫"), false);
+  for (const id of ["brew.fail.scale", "brew.fail.qing", "brew.fail.snow", "brew.fail.ratio"]) {
+    assert.equal(/[0-9]/.test(joined(id)), false, id);
+  }
+  assert.equal(joined("sword.fail").includes("冤"), false);
 });
 
 function cmapOf(buf) {

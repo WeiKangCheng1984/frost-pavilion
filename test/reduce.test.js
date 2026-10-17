@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { lines, sword, verses } from "../src/content.js";
+import { sword, verses } from "../src/content.js";
 import { endingLineId, resolveEnding } from "../src/endings.js";
 import { initialState, reduce } from "../src/reduce.js";
 
@@ -12,7 +12,8 @@ function solve(state, options = {}) {
       state = reduce(state, { type: "sequencePush", puzzleId: "bagua", token });
     }
   } else if (state.phase === 2) {
-    for (const token of ["shanzhong", "jiuwei", "qihai"]) {
+    state = reduce(state, { type: "useItem", itemId: "needle" });
+    for (const token of ["qihai", "shanzhong", "jiuwei"]) {
       state = reduce(state, { type: "sequencePush", puzzleId: "acupoint", token });
     }
   } else if (state.phase === 3) {
@@ -20,8 +21,11 @@ function solve(state, options = {}) {
       state = reduce(state, { type: "sequencePush", puzzleId: "wuxing", token });
     }
   } else if (state.phase === 4) {
-    state = reduce(state, { type: "submit", puzzleId: "ko", choice: "ko" });
+    for (const token of ["take", "retake", "elsewhere", "fill"]) {
+      state = reduce(state, { type: "sequencePush", puzzleId: "ko", token });
+    }
   } else if (state.phase === 5) {
+    state = reduce(state, { type: "useItem", itemId: "scale" });
     state = reduce(state, {
       type: "submit",
       puzzleId: "brew",
@@ -56,11 +60,7 @@ function ready(options = {}) {
   return playing(7, options);
 }
 
-test("台詞每則最多四行，每行最多十八字", () => {
-  for (const [id, rows] of Object.entries(lines)) {
-    assert.ok(rows.length <= 4, id);
-    for (const row of rows) assert.ok([...row].length <= 18, `${id}:${row}`);
-  }
+test("劍訣每句七字", () => {
   for (const text of Object.values(verses)) assert.equal([...text].length, 7);
 });
 
@@ -86,7 +86,7 @@ test("八卦正確三步後獲得銀針，過關文案確認後才進第 2 關",
   assert.equal(state.phase, 1);
   assert.equal(state.beat, "clear");
   assert.ok(state.inventory.includes("needle"));
-  assert.deepEqual(state.log, ["clear.1.a"]);
+  assert.deepEqual(state.log, ["clear.1"]);
   const entered = playing(2);
   assert.equal(entered.phase, 2);
   assert.equal(entered.beat, "play");
@@ -109,11 +109,13 @@ test("五行踩到金，序列清空", () => {
   assert.deepEqual(state.log, ["wuxing.fail"]);
 });
 
-test("四選一選倒撲不發道具，選劫才同時得到信和秤", () => {
-  const wrong = reduce(playing(4), { type: "submit", puzzleId: "ko", choice: "snapback" });
+test("棋盤走錯清空，四手走完才同時得到信和秤", () => {
+  const wrong = reduce(playing(4), { type: "sequencePush", puzzleId: "ko", token: "fill" });
   assert.equal(wrong.phase, 4);
+  assert.deepEqual(wrong.sequences.ko, []);
   assert.deepEqual(wrong.inventory, ["needle"]);
-  const right = reduce(wrong, { type: "submit", puzzleId: "ko", choice: "ko" });
+  assert.deepEqual(wrong.log, ["ko.fail"]);
+  const right = solve(wrong);
   assert.equal(right.phase, 4);
   assert.equal(right.beat, "clear");
   assert.deepEqual(right.inventory, ["needle", "letter", "scale"]);
@@ -123,6 +125,7 @@ test("正確配方且雪蓮別置：有解毒丹，沒有腐鐵瓶，關卡先�
   const state = solve(playing(5));
   assert.equal(state.phase, 5);
   assert.equal(state.beat, "clear");
+  assert.deepEqual(state.log, ["clear.5.with"]);
   assert.ok(state.inventory.includes("pill"));
   assert.equal(state.inventory.includes("acid_smear"), false);
   for (const id of state.inventory) assert.ok(ALLOWED.has(id), id);
@@ -217,7 +220,7 @@ test("結局表：白虎、揮刀、青龍、放丹、解鏈、時間到", () =>
   assert.equal(wolf.phase, "ending");
 
   const armed = ready({ blade: "yes" });
-  const byBlade = reduce(armed, { type: "submit", puzzleId: "ending", choice: "blade" });
+  const byBlade = reduce(armed, { type: "useItem", itemId: "blade" });
   assert.equal(byBlade.ending, "wolf");
 
   const unarmed = ready();
@@ -232,7 +235,7 @@ test("結局表：白虎、揮刀、青龍、放丹、解鏈、時間到", () =>
   assert.equal(flee.ending, "flee");
 
   let sever = ready();
-  sever = reduce(sever, { type: "placePill" });
+  sever = reduce(sever, { type: "useItem", itemId: "pill" });
   assert.equal(sever.ending, null);
   assert.equal(sever.flags.pillPlaced, true);
   assert.equal(sever.inventory.includes("pill"), false);
@@ -240,7 +243,7 @@ test("結局表：白虎、揮刀、青龍、放丹、解鏈、時間到", () =>
   assert.equal(sever.ending, "sever");
 
   let ember = ready({ smear: "yes" });
-  ember = reduce(ember, { type: "freeChains" });
+  ember = reduce(ember, { type: "useItem", itemId: "acid_smear" });
   assert.equal(ember.ending, null);
   assert.equal(ember.flags.chainsFreed, true);
   ember = reduce(ember, { type: "submit", puzzleId: "ending", choice: "qinglong" });
@@ -252,9 +255,67 @@ test("結局表：白虎、揮刀、青龍、放丹、解鏈、時間到", () =>
   assert.equal(buried.timer.remainingMs, 0);
 });
 
+test("有針但沒使用，銅孔不開；由上往下會失敗", () => {
+  let state = playing(2);
+  const sheathed = reduce(state, { type: "sequencePush", puzzleId: "acupoint", token: "qihai" });
+  assert.deepEqual(sheathed.log, ["acupoint.sheathed"]);
+  assert.equal(sheathed.flags.needleReady, false);
+  state = reduce(state, { type: "useItem", itemId: "needle" });
+  assert.equal(state.flags.needleReady, true);
+  const down = reduce(state, { type: "sequencePush", puzzleId: "acupoint", token: "shanzhong" });
+  assert.deepEqual(down.sequences.acupoint, []);
+  assert.deepEqual(down.log, ["acupoint.fail"]);
+  const opened = solve(state);
+  assert.equal(opened.beat, "clear");
+  assert.deepEqual(opened.sequences.acupoint, ["qihai", "shanzhong", "jiuwei"]);
+});
+
+test("沒選道具就使用，只得到一句提醒", () => {
+  const state = reduce(playing(1), { type: "useItem", itemId: null });
+  assert.deepEqual(state.log, ["use.none"]);
+  assert.equal(state.phase, 1);
+});
+
+test("藥架沒使用秤不能配，配錯一次只說一個原因", () => {
+  const state = playing(5);
+  const early = reduce(state, {
+    type: "submit",
+    puzzleId: "brew",
+    recipe: { hongre: 2, hanyin: 1, qingre: 0, xuelian: 0, setAsideSnow: true }
+  });
+  assert.deepEqual(early.log, ["brew.fail.scale"]);
+  assert.equal(early.beat, "play");
+  const weighed = reduce(state, { type: "useItem", itemId: "scale" });
+  assert.equal(weighed.flags.scaleReady, true);
+  const qing = reduce(weighed, {
+    type: "submit",
+    puzzleId: "brew",
+    recipe: { hongre: 2, hanyin: 1, qingre: 2, xuelian: 2, setAsideSnow: true }
+  });
+  assert.deepEqual(qing.log, ["brew.fail.qing"]);
+  const snow = reduce(weighed, {
+    type: "submit",
+    puzzleId: "brew",
+    recipe: { hongre: 2, hanyin: 1, qingre: 0, xuelian: 1, setAsideSnow: true }
+  });
+  assert.deepEqual(snow.log, ["brew.fail.snow"]);
+  const ratio = reduce(weighed, {
+    type: "submit",
+    puzzleId: "brew",
+    recipe: { hongre: 0, hanyin: 0, qingre: 0, xuelian: 0, setAsideSnow: true }
+  });
+  assert.deepEqual(ratio.log, ["brew.fail.ratio"]);
+});
+
+test("雪蓮不別置的過關文案說掌心沒有丹", () => {
+  const state = solve(playing(5), { setAsideSnow: false });
+  assert.equal(state.inventory.includes("pill"), false);
+  assert.deepEqual(state.log, ["clear.5.none"]);
+});
+
 test("鐵鏈已化開，再按白虎仍是孤狼飲血", () => {
   let state = ready({ smear: "yes" });
-  state = reduce(state, { type: "freeChains" });
+  state = reduce(state, { type: "useItem", itemId: "acid_smear" });
   state = reduce(state, { type: "submit", puzzleId: "ending", choice: "baihu" });
   assert.equal(state.ending, "wolf");
 });

@@ -5,7 +5,7 @@ const SWORD_IDS = ["lineA", "lineB", "lineC", "lineD"];
 
 export function initialState() {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     phase: 1,
     beat: "prologue",
     page: 0,
@@ -17,12 +17,15 @@ export function initialState() {
       chainsFreed: false,
       introDone: false,
       bladeOffered: false,
-      letterOpen: false
+      letterOpen: false,
+      needleReady: false,
+      scaleReady: false
     },
     sequences: {
       bagua: [],
       acupoint: [],
       wuxing: [],
+      ko: [],
       sword: [...sword.initial]
     },
     timer: null,
@@ -46,6 +49,8 @@ export function reduce(state, action) {
       return sequenceReorder(state, action.order);
     case "submit":
       return submit(state, action);
+    case "useItem":
+      return useItem(state, action.itemId);
     case "offerAnswer":
       return offerAnswer(state, action.offer, action.answer);
     case "placePill":
@@ -141,7 +146,6 @@ function finishPassage(state) {
 
 function inspect(state, target) {
   if (!playing(state)) return state;
-  if (target === "letter") return openLetter(state);
   const table = {
     compass: "compass.inspect",
     poem: "bagua.poem",
@@ -155,7 +159,8 @@ function inspect(state, target) {
     letter: "letter.1",
     pill: "pill.inspect",
     acid_smear: "smear.inspect",
-    blade: "blade.inspect"
+    blade: "blade.inspect",
+    barren: "inspect.barren"
   };
   const line = table[target];
   if (!line) return state;
@@ -173,6 +178,9 @@ function sequencePush(state, puzzleId, token) {
   if (!playing(state) || !puzzle || !puzzle.answer || state.phase !== puzzle.phase) return state;
   if (puzzle.requires?.some((id) => !has(state, id))) {
     return { ...state, log: [puzzle.blockedLine] };
+  }
+  if (puzzle.readyFlag && !state.flags[puzzle.readyFlag]) {
+    return { ...state, log: [puzzle.unreadyLine] };
   }
   const prev = state.sequences[puzzleId];
   const expected = puzzle.answer[prev.length];
@@ -197,7 +205,7 @@ function sequencePush(state, puzzleId, token) {
     page: 0,
     inventory: gainAll(state.inventory, puzzle.grant),
     sequences: { ...state.sequences, [puzzleId]: next },
-    log: [passages.clear[state.phase][0]]
+    log: [clearLine(state, gainAll(state.inventory, puzzle.grant))]
   };
 }
 
@@ -216,24 +224,15 @@ function isSwordOrder(order) {
 }
 
 function submit(state, action) {
-  if (action.puzzleId === "ko") return submitKo(state, action.choice);
   if (action.puzzleId === "brew") return submitBrew(state, action.recipe);
   if (action.puzzleId === "sword") return submitSword(state);
   if (action.puzzleId === "ending") return submitEnding(state, action.choice);
   return state;
 }
 
-function submitKo(state, choice) {
-  const puzzle = puzzles.ko;
-  if (!playing(state) || state.phase !== puzzle.phase) return state;
-  if (choice !== puzzle.answer) return { ...state, log: [puzzle.failLine] };
-  return {
-    ...state,
-    beat: "clear",
-    page: 0,
-    inventory: gainAll(state.inventory, puzzle.grant),
-    log: [passages.clear[state.phase][0]]
-  };
+function clearLine(state, inventory) {
+  if (state.phase === 5) return inventory.includes("pill") ? "clear.5.with" : "clear.5.none";
+  return passages.clear[state.phase][0];
 }
 
 function brewOk(input) {
@@ -244,19 +243,25 @@ function brewOk(input) {
     && input.xuelian === brew.recipe.xuelian;
 }
 
+function brewFailLine(recipe) {
+  if (recipe?.qingre) return brew.failQing;
+  if (recipe?.xuelian) return brew.failSnow;
+  return brew.failRatio;
+}
+
 function submitBrew(state, recipe) {
   if (!playing(state) || state.phase !== brew.phase) return state;
-  if (brew.requires.some((id) => !has(state, id))) {
+  if (brew.requires.some((id) => !has(state, id)) || !state.flags.scaleReady) {
     return { ...state, log: [brew.blockedLine] };
   }
-  if (!brewOk(recipe)) return { ...state, log: [brew.failLine] };
-  const inventory = recipe.setAsideSnow ? gain(state.inventory, "pill") : state.inventory;
+  if (!brewOk(recipe)) return { ...state, log: [brewFailLine(recipe)] };
+  const inventory = recipe?.setAsideSnow ? gain(state.inventory, "pill") : state.inventory;
   return {
     ...state,
     beat: "clear",
     page: 0,
     inventory,
-    log: [passages.clear[state.phase][0]]
+    log: [clearLine(state, inventory)]
   };
 }
 
@@ -274,7 +279,7 @@ function submitSword(state) {
     ...state,
     beat: "clear",
     page: 0,
-    log: [passages.clear[state.phase][0]]
+    log: [clearLine(state, state.inventory)]
   };
 }
 
@@ -311,8 +316,47 @@ function answerBlade(state, answer) {
   }, 7);
 }
 
+function useItem(state, itemId) {
+  if (!playing(state)) return state;
+  if (!itemId) return { ...state, log: ["use.none"] };
+  if (!has(state, itemId)) return state;
+  if (itemId === "needle") return useNeedle(state);
+  if (itemId === "letter") return openLetter(state);
+  if (itemId === "scale") return useScale(state);
+  if (itemId === "pill") return placePill(state);
+  if (itemId === "acid_smear") return freeChains(state);
+  if (itemId === "blade") return useBlade(state);
+  return state;
+}
+
+function useNeedle(state) {
+  if (state.flags.needleReady) return { ...state, log: ["needle.spent"] };
+  if (state.phase !== 2) return { ...state, log: ["needle.useless"] };
+  return {
+    ...state,
+    flags: { ...state.flags, needleReady: true },
+    log: ["needle.ready"]
+  };
+}
+
+function useScale(state) {
+  if (state.phase !== 5) return { ...state, log: ["scale.useless"] };
+  if (state.flags.scaleReady) return { ...state, log: ["scale.again"] };
+  return {
+    ...state,
+    flags: { ...state.flags, scaleReady: true },
+    log: ["scale.ready"]
+  };
+}
+
+function useBlade(state) {
+  if (state.phase !== 7 || !state.flags.introDone) return { ...state, log: ["blade.early"] };
+  return submitEnding(state, "blade");
+}
+
 function placePill(state) {
-  if (state.phase !== 7 || !state.flags.introDone || !has(state, "pill")) return state;
+  if (!playing(state) || !has(state, "pill")) return state;
+  if (state.phase !== 7 || !state.flags.introDone) return { ...state, log: ["pill.early"] };
   return {
     ...state,
     inventory: lose(state.inventory, "pill"),
@@ -322,7 +366,8 @@ function placePill(state) {
 }
 
 function freeChains(state) {
-  if (state.phase !== 7 || !state.flags.introDone || !has(state, "acid_smear")) return state;
+  if (!playing(state) || !has(state, "acid_smear")) return state;
+  if (state.phase !== 7 || !state.flags.introDone) return { ...state, log: ["smear.early"] };
   return {
     ...state,
     inventory: lose(state.inventory, "acid_smear"),
