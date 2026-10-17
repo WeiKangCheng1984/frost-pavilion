@@ -121,6 +121,7 @@ export function paintFrame(state, now = performance.now()) {
   if (latest) latest.state = state;
   syncAnim(state, now);
   paintScene(state, now);
+  paintTimer(state);
   const busy = animBusy(now);
   if (busy !== wasAnimBusy) {
     wasAnimBusy = busy;

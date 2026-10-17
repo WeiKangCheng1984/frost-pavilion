@@ -11,22 +11,38 @@ const FRAME_CAP = 250;
 const audio = createAudio();
 let state = loadSave(sessionStorage) ?? initialState();
 let lastFrame = 0;
+let nextTickSave = 0;
 
 onAnimSound((name) => audio.playCue(name));
 setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
-function send(action) {
-  const next = reduce(state, action);
-  if (next === state) return;
-  state = next;
+function persist() {
   try {
     writeSave(state, sessionStorage);
   } catch {
     // 這一頁寫不進時，遊玩仍繼續，重新整理才會回到第 1 關。
   }
-  render(state, send);
+}
+
+function send(action) {
+  const next = reduce(state, action);
+  if (next === state) return;
+  const prevEnding = state.ending;
+  state = next;
+  const tickOnly = action.type === "tick" && !state.ending;
+  if (tickOnly) {
+    // 倒數每幀都整頁重繪／存檔會卡住計時，改成輕量更新。
+    if (performance.now() >= nextTickSave) {
+      nextTickSave = performance.now() + 1000;
+      persist();
+    }
+  } else {
+    persist();
+    render(state, send);
+    applyScale();
+    if (state.ending && !prevEnding) nextTickSave = 0;
+  }
   audio.sync(state);
-  applyScale();
 }
 
 function armAudio() {

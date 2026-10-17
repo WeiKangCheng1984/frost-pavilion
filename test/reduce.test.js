@@ -185,6 +185,18 @@ test("劍訣錯序不開門；對序先過關，短刃問完才進第 7 關", ()
   assert.equal(entered.flags.introDone, false);
 });
 
+test("進第七關選擇時倒數一定在跑", () => {
+  const state = ready();
+  assert.equal(state.flags.introDone, true);
+  assert.equal(state.timer.running, true);
+  assert.equal(state.timer.pausedByHidden, false);
+  assert.equal(state.timer.pausedByLetter, false);
+  assert.ok(state.timer.remainingMs > 59000);
+  const later = reduce(state, { type: "tick", ms: 1000 });
+  assert.equal(later.timer.remainingMs, state.timer.remainingMs - 1000);
+  assert.equal(later.ending, null);
+});
+
 test("開場前連續 tick 不扣時，開場後才扣", () => {
   let state = playing(6);
   state = solve(state);

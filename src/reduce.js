@@ -164,32 +164,43 @@ function advance(state) {
   return finishPassage(state);
 }
 
+function startFinaleTimer(state) {
+  const base = state.timer ?? {
+    remainingMs: timerMs,
+    running: false,
+    pausedByLetter: false,
+    pausedByHidden: false
+  };
+  return {
+    ...state,
+    timer: {
+      ...base,
+      remainingMs: typeof base.remainingMs === "number" ? base.remainingMs : timerMs,
+      running: true,
+      pausedByLetter: false,
+      pausedByHidden: false
+    }
+  };
+}
+
 function finishPassage(state) {
   if (state.beat === "cheat") {
-    return {
+    return startFinaleTimer({
       ...state,
       beat: "play",
       page: 0,
       flags: { ...state.flags, introDone: true },
-      timer: {
-        ...state.timer,
-        running: !state.timer.pausedByLetter && !state.timer.pausedByHidden
-      },
       log: ["finale.hold"]
-    };
+    });
   }
   if (state.beat === "prologue") return beginEnter(state, 1);
   if (state.beat === "enter" && state.phase === 7) {
-    return {
+    return startFinaleTimer({
       ...state,
       beat: "play",
       page: 0,
-      flags: { ...state.flags, introDone: true },
-      timer: {
-        ...state.timer,
-        running: !state.timer.pausedByLetter && !state.timer.pausedByHidden
-      }
-    };
+      flags: { ...state.flags, introDone: true }
+    });
   }
   if (state.beat === "enter") return { ...state, beat: "play", page: 0 };
   if (state.beat !== "clear") return state;
