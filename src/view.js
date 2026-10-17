@@ -2,7 +2,7 @@ import { acupoints, elements, endingNames, herbs, hints, items, koMoves, lines, 
 import { endingKickerId, endingPageIds } from "./endings.js";
 import { glanceOpen } from "./reduce.js";
 import { animBusy, setReducedMotion, stageView, syncAnim } from "./anim.js";
-import { downloadEndingCard } from "./card.js";
+import { prepareEndingCard, releasePreparedCard, savePreparedCard } from "./card.js";
 import { getSpriteSheet, loadSprites, onSprites, paintStage } from "./sprites.js";
 
 const PHASES = {
@@ -52,6 +52,7 @@ let selected = null;
 let restartDelayTimer = 0;
 let restartDelayKey = "";
 let wasAnimBusy = false;
+let preparedCard = null;
 
 const TARGET_FRAMES = {
   compass: "compass",
@@ -699,10 +700,21 @@ function bindStatic() {
     const button = document.querySelector("#save-card");
     button.disabled = true;
     try {
-      await downloadEndingCard(latest.state, getSpriteSheet());
+      await openCardPreview(latest.state);
     } finally {
       button.disabled = false;
     }
+  });
+  document.querySelector("#card-modal-save").addEventListener("click", () => {
+    if (!preparedCard) return;
+    savePreparedCard(preparedCard);
+    closeCardPreview();
+  });
+  document.querySelector("#card-modal-close").addEventListener("click", () => {
+    closeCardPreview();
+  });
+  document.querySelector("#card-modal").addEventListener("click", (event) => {
+    if (event.target === document.querySelector("#card-modal")) closeCardPreview();
   });
   document.querySelector("#submit").addEventListener("click", () => {
     if (!latest || document.querySelector("#submit").disabled) return;
@@ -714,6 +726,29 @@ function bindStatic() {
       send({ type: "submit", puzzleId: "sword" });
     }
   });
+}
+
+async function openCardPreview(state) {
+  releasePreparedCard(preparedCard);
+  preparedCard = await prepareEndingCard(state, getSpriteSheet());
+  if (!preparedCard) return;
+  const modal = document.querySelector("#card-modal");
+  const img = document.querySelector("#card-modal-img");
+  const ask = document.querySelector("#card-modal-ask");
+  const title = document.querySelector("#card-modal-title");
+  img.src = preparedCard.url;
+  ask.textContent = preparedCard.details.ask;
+  title.textContent = `${preparedCard.details.endingName} · 結局卡`;
+  modal.hidden = false;
+}
+
+function closeCardPreview() {
+  const modal = document.querySelector("#card-modal");
+  const img = document.querySelector("#card-modal-img");
+  if (modal) modal.hidden = true;
+  if (img) img.removeAttribute("src");
+  releasePreparedCard(preparedCard);
+  preparedCard = null;
 }
 
 const timerBar = document.querySelector("#timer-bar");

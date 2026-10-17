@@ -308,6 +308,63 @@ h1 { font-size: 24px; }
 
 .ending-actions button { margin-top: 0; }
 
+.card-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(20, 17, 14, 0.72);
+}
+
+.card-modal-panel {
+  width: min(420px, 100%);
+  max-height: min(92vh, 920px);
+  overflow: auto;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card-modal-title {
+  margin: 0;
+  color: var(--cinnabar);
+  text-align: center;
+}
+
+.card-modal-frame {
+  background: #14110e;
+  border: 1px solid var(--ink);
+  padding: 8px;
+  max-height: min(58vh, 560px);
+  overflow: auto;
+}
+
+.card-modal-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+.card-modal-ask {
+  margin: 0;
+  color: var(--mute);
+  text-align: center;
+  line-height: var(--speech-line);
+}
+
+.card-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
 .license h2 { margin-top: 16px; }
 
 .license p { margin: 8px 0 0; }
