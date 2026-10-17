@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { sword, verses } from "../src/content.js";
-import { endingLineId, resolveEnding } from "../src/endings.js";
+import { endingLineId, endingPageIds, resolveEnding } from "../src/endings.js";
 import { initialState, reduce } from "../src/reduce.js";
 
 const ALLOWED = new Set(["needle", "letter", "scale", "pill", "acid_smear", "blade"]);
@@ -40,7 +40,7 @@ function solve(state, options = {}) {
 
 function playing(phase, options = {}) {
   let state = initialState();
-  for (let i = 0; i < 80 && !(state.phase === phase && state.beat === "play"); i += 1) {
+  for (let i = 0; i < 160 && !(state.phase === phase && state.beat === "play"); i += 1) {
     if (state.beat === "offer") {
       const offer = state.phase === 5 ? "smear" : "blade";
       const answer = offer === "smear" ? (options.smear ?? "no") : (options.blade ?? "no");
@@ -86,7 +86,7 @@ test("八卦正確三步後獲得銀針，過關文案確認後才進第 2 關",
   assert.equal(state.phase, 1);
   assert.equal(state.beat, "clear");
   assert.ok(state.inventory.includes("needle"));
-  assert.deepEqual(state.log, ["clear.1"]);
+  assert.deepEqual(state.log, ["clear.1.a"]);
   const entered = playing(2);
   assert.equal(entered.phase, 2);
   assert.equal(entered.beat, "play");
@@ -125,7 +125,7 @@ test("正確配方且雪蓮別置：有解毒丹，沒有腐鐵瓶，關卡先�
   const state = solve(playing(5));
   assert.equal(state.phase, 5);
   assert.equal(state.beat, "clear");
-  assert.deepEqual(state.log, ["clear.5.with"]);
+  assert.deepEqual(state.log, ["clear.5.with.a"]);
   assert.ok(state.inventory.includes("pill"));
   assert.equal(state.inventory.includes("acid_smear"), false);
   for (const id of state.inventory) assert.ok(ALLOWED.has(id), id);
@@ -310,7 +310,7 @@ test("藥架沒使用秤不能配，配錯一次只說一個原因", () => {
 test("雪蓮不別置的過關文案說掌心沒有丹", () => {
   const state = solve(playing(5), { setAsideSnow: false });
   assert.equal(state.inventory.includes("pill"), false);
-  assert.deepEqual(state.log, ["clear.5.none"]);
+  assert.deepEqual(state.log, ["clear.5.none.a"]);
 });
 
 test("鐵鏈已化開，再按白虎仍是孤狼飲血", () => {
@@ -332,8 +332,8 @@ test("讀過信的孤狼飲血用另一句，結局代號不變", () => {
   state = reduce(state, { type: "closeLetter" });
   state = reduce(state, { type: "submit", puzzleId: "ending", choice: "baihu" });
   assert.equal(state.ending, "wolf");
-  assert.deepEqual(state.log, ["ending.wolf.read"]);
-  assert.equal(endingLineId("wolf", false), "ending.wolf.unread");
+  assert.deepEqual(state.log, ["ending.wolf.read.a"]);
+  assert.equal(endingLineId("wolf", false), "ending.wolf.unread.a");
 });
 
 test("開場前按石頭沒有反應", () => {
@@ -360,6 +360,24 @@ test("分頁隱藏不會被合上信件重新打開", () => {
   state = reduce(state, { type: "reveal" });
   assert.equal(state.timer.pausedByHidden, false);
   assert.equal(state.timer.running, true);
+});
+
+test("開場可上一段，不動關卡", () => {
+  let state = initialState();
+  state = reduce(state, { type: "advance" });
+  assert.equal(state.page, 1);
+  state = reduce(state, { type: "retreat" });
+  assert.equal(state.page, 0);
+  assert.equal(state.beat, "prologue");
+  assert.deepEqual(state.log, ["prologue.1"]);
+});
+
+test("結局三頁與 flee 袖裡有丹修飾", () => {
+  const pages = endingPageIds("flee", {
+    flags: { letterRead: false },
+    inventory: ["pill"]
+  });
+  assert.deepEqual(pages, ["ending.flee.a", "ending.flee.b.pill", "ending.flee.c"]);
 });
 
 test("resolveEnding 與結局表一致", () => {

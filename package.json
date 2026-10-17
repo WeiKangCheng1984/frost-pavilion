@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node dev-server.js",
     "test": "node --test",
-    "build": "node --test"
+    "build": "node --test",
+    "sync-copy": "node scripts/sync-content.mjs"
   }
 }

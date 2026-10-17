@@ -13,6 +13,11 @@
       <header class="top">
         <h1>血鎖寒閣</h1>
         <div class="top-tools">
+          <div class="text-size" role="group" aria-label="字級">
+            <button type="button" class="text-size-btn" data-text-size="s" aria-pressed="false">小</button>
+            <button type="button" class="text-size-btn" data-text-size="m" aria-pressed="true">中</button>
+            <button type="button" class="text-size-btn" data-text-size="l" aria-pressed="false">大</button>
+          </div>
           <a class="text-button" href="licenses.html">授權</a>
           <button type="button" id="mute" aria-pressed="false">靜音</button>
           <div class="clock-wrap">
@@ -27,6 +32,7 @@
         <div class="caption">
           <p class="kicker" id="kicker"></p>
           <p class="block-name" id="block-name"></p>
+          <p class="ending-kicker" id="ending-kicker" hidden></p>
           <p class="progress" id="progress"></p>
         </div>
       </section>
@@ -35,7 +41,8 @@
         <div id="speech" aria-live="polite"></div>
         <div class="speech-actions">
           <button type="button" id="skip">跳過</button>
-          <button type="button" id="advance" hidden>下一頁</button>
+          <button type="button" id="retreat" hidden>上一段</button>
+          <button type="button" id="advance" hidden>繼續</button>
         </div>
       </section>
 

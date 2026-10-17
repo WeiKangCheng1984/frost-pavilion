@@ -1,6 +1,7 @@
 import { createAudio } from "./audio.js";
 import { initialState, reduce } from "./reduce.js";
 import { applyScale, mountScale } from "./scale.js";
+import { mountTextSize } from "./textSize.js";
 import { loadSave, writeSave } from "./save.js";
 import { paintMute, render } from "./view.js";
 
@@ -58,4 +59,5 @@ function frame(now) {
 paintMute(audio.muted);
 render(state, send);
 mountScale();
+mountTextSize();
 window.requestAnimationFrame(frame);

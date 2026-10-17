@@ -1,11 +1,11 @@
 import { brew, passages, puzzles, sword, timerMs } from "./content.js";
-import { endingLineId, resolveEnding } from "./endings.js";
+import { endingPageIds, resolveEnding } from "./endings.js";
 
 const SWORD_IDS = ["lineA", "lineB", "lineC", "lineD"];
 
 export function initialState() {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     phase: 1,
     beat: "prologue",
     page: 0,
@@ -43,6 +43,8 @@ export function reduce(state, action) {
       return inspect(state, action.target);
     case "advance":
       return advance(state);
+    case "retreat":
+      return retreat(state);
     case "sequencePush":
       return sequencePush(state, action.puzzleId, action.token);
     case "sequenceReorder":
@@ -94,12 +96,27 @@ function playing(state) {
   return state.beat === "play" && !state.flags.letterOpen;
 }
 
+function clearPassage(state) {
+  if (state.phase === 5) {
+    return has(state, "pill") ? passages.clear[5].with : passages.clear[5].none;
+  }
+  return passages.clear[state.phase];
+}
+
 function pageIds(state) {
+  if (state.phase === "ending") return endingPageIds(state.ending, state);
   if (state.flags.letterOpen) return passages.letter;
   if (state.beat === "prologue") return passages.prologue;
   if (state.beat === "enter") return passages.enter[state.phase];
-  if (state.beat === "clear") return passages.clear[state.phase];
+  if (state.beat === "clear") return clearPassage(state);
   return null;
+}
+
+function retreat(state) {
+  const ids = pageIds(state);
+  if (!ids || state.page <= 0) return state;
+  const page = state.page - 1;
+  return { ...state, page, log: [ids[page]] };
 }
 
 function beginEnter(state, phase) {
@@ -231,7 +248,7 @@ function submit(state, action) {
 }
 
 function clearLine(state, inventory) {
-  if (state.phase === 5) return inventory.includes("pill") ? "clear.5.with" : "clear.5.none";
+  if (state.phase === 5) return inventory.includes("pill") ? "clear.5.with.a" : "clear.5.none.a";
   return passages.clear[state.phase][0];
 }
 
@@ -440,10 +457,12 @@ function tick(state, ms) {
 }
 
 function applyEnding(state, ending) {
-  const line = endingLineId(ending, state.flags.letterRead);
+  const pages = endingPageIds(ending, state);
   return {
     ...state,
     phase: "ending",
+    beat: "ending",
+    page: 0,
     ending,
     timer: state.timer
       ? {
@@ -453,6 +472,6 @@ function applyEnding(state, ending) {
           remainingMs: ending === "buried" ? 0 : state.timer.remainingMs
         }
       : null,
-    log: line ? [line] : state.log
+    log: pages.length ? [pages[0]] : state.log
   };
 }

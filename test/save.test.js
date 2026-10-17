@@ -40,7 +40,7 @@ function solve(state) {
 
 function reachPhase3() {
   let state = initialState();
-  for (let i = 0; i < 80 && !(state.phase === 3 && state.beat === "play"); i += 1) {
+  for (let i = 0; i < 160 && !(state.phase === 3 && state.beat === "play"); i += 1) {
     if (state.beat === "play") state = solve(state);
     else state = reduce(state, { type: "advance" });
   }
@@ -49,7 +49,7 @@ function reachPhase3() {
 
 function reachEnding() {
   let state = initialState();
-  for (let i = 0; i < 80 && !(state.phase === 7 && state.beat === "play"); i += 1) {
+  for (let i = 0; i < 160 && !(state.phase === 7 && state.beat === "play"); i += 1) {
     if (state.beat === "offer") {
       state = reduce(state, { type: "offerAnswer", offer: state.phase === 5 ? "smear" : "blade", answer: "no" });
     } else if (state.beat === "play") state = solve(state);

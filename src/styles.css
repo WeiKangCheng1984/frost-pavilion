@@ -11,13 +11,42 @@
   --cinnabar: #8d2f2a;
   --line: #c9b896;
   --mute: #5e564c;
+  --ui-size: 12px;
+  --ui-line: 12px;
+  --speech-size: 12px;
+  --speech-line: 16px;
+  --speech-box: 64px;
   color: var(--ink);
   background: var(--ink);
   font-family: "Fusion Pixel 12px Prop zh-Hant";
-  font-size: 12px;
-  line-height: 12px;
+  font-size: var(--ui-size);
+  line-height: var(--ui-line);
   font-smooth: never;
   -webkit-font-smoothing: none;
+}
+
+html[data-text-size="s"] {
+  --ui-size: 10px;
+  --ui-line: 10px;
+  --speech-size: 10px;
+  --speech-line: 14px;
+  --speech-box: 56px;
+}
+
+html[data-text-size="m"] {
+  --ui-size: 12px;
+  --ui-line: 12px;
+  --speech-size: 12px;
+  --speech-line: 16px;
+  --speech-box: 64px;
+}
+
+html[data-text-size="l"] {
+  --ui-size: 14px;
+  --ui-line: 14px;
+  --speech-size: 14px;
+  --speech-line: 18px;
+  --speech-box: 72px;
 }
 
 * { box-sizing: border-box; }
@@ -92,6 +121,19 @@ button[aria-pressed="true"] {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.text-size {
+  display: flex;
+  gap: 4px;
+}
+
+.text-size-btn {
+  min-width: 36px;
+  padding: 0 4px;
+  justify-content: center;
 }
 
 h1,
@@ -148,7 +190,14 @@ h1 { font-size: 24px; }
 .kicker,
 .progress,
 .hint,
-.license p { line-height: 12px; }
+.ending-kicker,
+.license p { line-height: var(--ui-line); }
+
+.ending-kicker {
+  margin: 0;
+  color: var(--cinnabar);
+  letter-spacing: 0;
+}
 
 .progress { min-height: 12px; }
 
@@ -157,7 +206,7 @@ h1 { font-size: 24px; }
   grid-template-columns: 1fr auto;
   gap: 8px;
   align-items: start;
-  min-height: 72px;
+  min-height: calc(var(--speech-box) + 16px);
   padding-top: 8px;
   padding-bottom: 8px;
   border-top: 1px solid var(--line);
@@ -166,9 +215,10 @@ h1 { font-size: 24px; }
 
 #speech {
   margin: 0;
-  max-height: 160px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  min-height: var(--speech-box);
+  max-height: var(--speech-box);
+  overflow: hidden;
+  font-size: var(--speech-size);
 }
 
 .speech-actions {
@@ -179,8 +229,8 @@ h1 { font-size: 24px; }
 
 #speech p {
   margin: 0 0 8px;
-  min-height: 16px;
-  line-height: 16px;
+  min-height: var(--speech-line);
+  line-height: var(--speech-line);
 }
 
 #speech p:last-child { margin-bottom: 0; }

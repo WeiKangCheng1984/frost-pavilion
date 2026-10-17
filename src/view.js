@@ -1,4 +1,5 @@
 import { acupoints, elements, endingNames, herbs, hints, items, koMoves, lines, passages, trigrams, verses } from "./content.js";
+import { endingKickerId, endingPageIds } from "./endings.js";
 import { loadSprites, onSprites, paintStage } from "./sprites.js";
 
 const PHASES = {
@@ -44,6 +45,8 @@ let speech = { key: "", rows: [], count: 0, done: true, timer: 0 };
 let brewForm = emptyBrew();
 let focus = null;
 let selected = null;
+let restartDelayTimer = 0;
+let restartDelayKey = "";
 
 const TARGET_FRAMES = {
   compass: "compass",
@@ -111,6 +114,23 @@ function emptyBrew() {
   return { hongre: 0, hanyin: 0, qingre: 0, xuelian: 0, setAsideSnow: false };
 }
 
+function clearPassage(state) {
+  if (state.phase === 5 && state.beat === "clear") {
+    return state.inventory.includes("pill") ? passages.clear[5].with : passages.clear[5].none;
+  }
+  if (state.beat === "clear") return passages.clear[state.phase];
+  return null;
+}
+
+function pageIdsFor(state) {
+  if (state.phase === "ending") return endingPageIds(state.ending, state);
+  if (state.flags.letterOpen) return passages.letter;
+  if (state.beat === "prologue") return passages.prologue;
+  if (state.beat === "enter") return passages.enter[state.phase];
+  if (state.beat === "clear") return clearPassage(state);
+  return null;
+}
+
 function rowsFrom(ids) {
   const rows = [];
   for (const id of ids) {
@@ -159,23 +179,26 @@ function paintSpeech() {
     line.textContent = text;
     speechEl.append(line);
   }
-  speechEl.scrollTop = speechEl.scrollHeight;
   skip.hidden = speech.done || !speech.key;
   paintAdvance();
+  paintRetreat();
 }
 
 function passageLabel(state) {
-  if (state.ending) return "";
-  if (state.flags.letterOpen) return state.page < passages.letter.length - 1 ? "下一頁" : "";
-  const ids = state.beat === "prologue"
-    ? passages.prologue
-    : state.beat === "enter"
-      ? passages.enter[state.phase]
-      : state.beat === "clear"
-        ? passages.clear[state.phase]
-        : null;
+  const ids = pageIdsFor(state);
   if (!ids) return "";
-  return state.page >= ids.length - 1 ? "繼續" : "下一頁";
+  if (state.phase === "ending") {
+    return state.page >= ids.length - 1 ? "" : "繼續";
+  }
+  if (state.flags.letterOpen) {
+    return state.page >= ids.length - 1 ? "合上" : "繼續";
+  }
+  return "繼續";
+}
+
+function canRetreat(state) {
+  const ids = pageIdsFor(state);
+  return Boolean(ids && state.page > 0);
 }
 
 function paintAdvance() {
@@ -184,12 +207,20 @@ function paintAdvance() {
   if (!button || !state) return;
   const label = speech.done ? passageLabel(state) : "";
   button.hidden = !label;
-  button.textContent = label || "下一頁";
+  button.textContent = label || "繼續";
+}
+
+function paintRetreat() {
+  const button = document.querySelector("#retreat");
+  const state = latest?.state;
+  if (!button || !state) return;
+  button.hidden = !speech.done || !canRetreat(state);
 }
 
 function paintChrome() {
   const { state, send } = latest;
   const ended = Boolean(state.ending);
+  const kickerEl = document.querySelector("#ending-kicker");
   const phase = ended
     ? { kicker: "結局", block: endingNames[state.ending] }
     : state.beat === "prologue"
@@ -197,6 +228,12 @@ function paintChrome() {
       : (PHASES[state.phase] ?? PHASES[7]);
   document.querySelector("#kicker").textContent = phase.kicker;
   document.querySelector("#block-name").textContent = phase.block;
+  if (kickerEl) {
+    const kid = ended ? endingKickerId(state.ending) : null;
+    const sub = kid ? lines[kid]?.[0] ?? "" : "";
+    kickerEl.textContent = sub;
+    kickerEl.hidden = !sub;
+  }
   document.querySelector("#progress").textContent = progressText(state);
   paintScene(state);
 
@@ -204,8 +241,8 @@ function paintChrome() {
   document.querySelector(".bag-wrap").hidden = ended;
   document.querySelector(".verbs").hidden = ended || !inPlay;
   document.querySelector("#hint").hidden = ended;
-  document.querySelector("#restart").hidden = !ended;
-  document.querySelector("#close-letter").hidden = ended || !state.flags.letterOpen;
+  paintRestart(state, ended);
+  document.querySelector("#close-letter").hidden = true;
   document.querySelector("#debug-skip").hidden = !debug || ended || !state.timer?.running;
 
   if (!ended) {
@@ -217,6 +254,34 @@ function paintChrome() {
   paintSubmit(state);
 
   document.querySelector("#inspect").setAttribute("aria-expanded", String(inspectOpen));
+}
+
+function paintRestart(state, ended) {
+  const button = document.querySelector("#restart");
+  if (!button) return;
+  if (!ended) {
+    window.clearTimeout(restartDelayTimer);
+    restartDelayKey = "";
+    button.hidden = true;
+    return;
+  }
+  const ids = endingPageIds(state.ending, state);
+  const onLast = state.page >= ids.length - 1;
+  const key = `${state.ending}:${state.page}:${speech.done}`;
+  if (!onLast || !speech.done) {
+    button.hidden = true;
+    return;
+  }
+  if (restartDelayKey === key) return;
+  restartDelayKey = key;
+  window.clearTimeout(restartDelayTimer);
+  button.hidden = true;
+  const delay = reducedMotion ? 0 : 1200;
+  restartDelayTimer = window.setTimeout(() => {
+    if (latest?.state?.ending === state.ending && latest.state.page === state.page) {
+      button.hidden = false;
+    }
+  }, delay);
 }
 
 function paintTimer(state) {
@@ -280,11 +345,11 @@ function progressText(state) {
   if (state.phase === 5) return doseSummary();
   if (state.phase === 6) return "排好四句再提交。";
   if (state.ending) return endingNames[state.ending];
-  if (!state.flags.introDone) return "開場未完，倒數未走。";
+  if (!state.flags.introDone) return "他的話還沒說完。";
   if (state.timer?.pausedByLetter) return "讀信時，香暫停。";
-  if (state.flags.chainsFreed) return "鐵鏈已開。青龍石才是兩人一起走的門。";
-  if (state.flags.pillPlaced) return "丹已留在他手邊。青龍石是你一個人走的門。";
-  return "白虎是地火。青龍是出門。囊裡的東西要先使用。";
+  if (state.flags.chainsFreed) return "鏈開了。青龍才是兩人走的路。";
+  if (state.flags.pillPlaced) return "丹留下了。青龍是你一個人走的門。";
+  return hints.finale;
 }
 
 function doseSummary() {
@@ -542,6 +607,11 @@ function bindStatic() {
     if (!speech.done) return;
     focus = null;
     latest?.send({ type: "advance" });
+  });
+  document.querySelector("#retreat").addEventListener("click", () => {
+    if (!speech.done) return;
+    focus = null;
+    latest?.send({ type: "retreat" });
   });
   document.querySelector("#speech").addEventListener("click", finishSpeech);
   document.querySelector("#inspect").addEventListener("click", () => {
