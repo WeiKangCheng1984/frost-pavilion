@@ -12,13 +12,17 @@
   --line: #c2b089;
   --mute: #5a534a;
   --veil: #14110e;
-  --ui-size: 12px;
-  --ui-line: 12px;
-  --speech-size: 12px;
-  --speech-line: 16px;
-  --speech-box: 72px;
+  /* 預設＝中；小／中／大各比舊版大一級 */
+  --ui-size: 14px;
+  --ui-line: 14px;
+  --speech-size: 14px;
+  --speech-line: 18px;
+  --speech-box: 84px;
+  --title-size: 22px;
+  --title-line: 24px;
   --shell-w: 384px;
-  --dock-h: 56px;
+  /* 對齊底欄實高（padding 8+8 + 按鈕 44 + 上邊線），避免囊抽屜與 dock 重疊 */
+  --dock-h: 64px;
   color: var(--ink);
   background: var(--veil);
   font-family: "Fusion Pixel 12px Prop zh-Hant";
@@ -29,27 +33,36 @@
 }
 
 html[data-text-size="s"] {
-  --ui-size: 10px;
-  --ui-line: 10px;
-  --speech-size: 10px;
-  --speech-line: 14px;
-  --speech-box: 64px;
-}
-
-html[data-text-size="m"] {
   --ui-size: 12px;
   --ui-line: 12px;
   --speech-size: 12px;
   --speech-line: 16px;
   --speech-box: 72px;
+  --title-size: 20px;
+  --title-line: 22px;
+  --dock-h: 62px;
 }
 
-html[data-text-size="l"] {
+html[data-text-size="m"] {
   --ui-size: 14px;
   --ui-line: 14px;
   --speech-size: 14px;
   --speech-line: 18px;
-  --speech-box: 80px;
+  --speech-box: 84px;
+  --title-size: 22px;
+  --title-line: 24px;
+  --dock-h: 64px;
+}
+
+html[data-text-size="l"] {
+  --ui-size: 16px;
+  --ui-line: 16px;
+  --speech-size: 16px;
+  --speech-line: 22px;
+  --speech-box: 96px;
+  --title-size: 24px;
+  --title-line: 26px;
+  --dock-h: 68px;
 }
 
 * { box-sizing: border-box; }
@@ -227,9 +240,9 @@ button[aria-pressed="true"] {
 
 #block-name {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--title-size);
   font-weight: 400;
-  line-height: 22px;
+  line-height: var(--title-line);
 }
 
 .ending-kicker { color: var(--cinnabar); }
@@ -365,9 +378,32 @@ button[aria-pressed="true"] {
   background: var(--paper-deep);
 }
 
+.inspect-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  width: 100%;
+}
+
+.inspect-head .hand-label { margin: 0; }
+
+.inspect-close {
+  min-width: 40px;
+  min-height: 36px;
+  padding: 0 8px;
+}
+
+.inspect-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
 #bag,
 .puzzle,
-.inspect-panel,
 .hand-tools,
 .dock,
 .dock-nav,
@@ -380,10 +416,25 @@ button[aria-pressed="true"] {
 #bag p { margin: 0; color: var(--mute); }
 
 #inspect[aria-expanded="true"],
+#use[aria-pressed="true"],
 #bag-toggle[aria-expanded="true"],
 #menu-toggle[aria-expanded="true"] {
   background: var(--ink);
   color: var(--paper);
+}
+
+#advance.is-pulse {
+  box-shadow: inset 0 0 0 1px var(--cinnabar);
+}
+
+#advance.is-cue {
+  animation: advance-cue 0.42s ease;
+}
+
+@keyframes advance-cue {
+  0%,
+  100% { transform: scale(1); }
+  35% { transform: scale(1.07); }
 }
 
 .mix,
@@ -396,7 +447,11 @@ button[aria-pressed="true"] {
 }
 
 .mix span,
-.sword-row span { min-width: 8em; line-height: var(--ui-line); }
+.sword-row span { min-width: 7em; line-height: var(--ui-line); }
+
+.aside-row { margin-top: 4px; }
+
+.aside-row button { min-width: 44px; }
 
 .sword-row span { flex: 1; }
 
@@ -421,9 +476,9 @@ button[aria-pressed="true"] {
 
 .bag-head h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--title-size);
   font-weight: 400;
-  line-height: 16px;
+  line-height: var(--title-line);
 }
 
 .bag-close {
@@ -444,6 +499,7 @@ button[aria-pressed="true"] {
   width: var(--frame-w, min(384px, 100%));
   max-width: 100%;
   z-index: 30;
+  min-height: var(--dock-h);
   padding: 8px;
   padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
   gap: 6px;
@@ -455,7 +511,22 @@ button[aria-pressed="true"] {
   touch-action: manipulation;
 }
 
-.dock > button { flex: 0 0 auto; min-width: 52px; }
+.dock > button {
+  flex: 0 0 auto;
+  min-width: 52px;
+  max-width: 30%;
+  white-space: nowrap;
+}
+
+#use { min-width: 64px; }
+
+html[data-text-size="l"] .dock > button {
+  min-width: 48px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+html[data-text-size="l"] #use { min-width: 72px; }
 
 .dock-nav {
   flex: 1;
@@ -469,6 +540,24 @@ button[aria-pressed="true"] {
 
 /* 手機：主欄常駐解謎；囊為矮抽屜，不降暗主畫面 */
 @media (max-width: 719px) {
+  .puzzle,
+  .inspect-targets,
+  #bag {
+    gap: 10px;
+  }
+
+  .puzzle button,
+  .inspect-targets button,
+  #bag button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .mix button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
   .bag-drawer {
     display: none;
     position: fixed;
@@ -551,17 +640,17 @@ button[aria-pressed="true"] {
   z-index: 40;
   display: grid;
   place-items: center;
-  padding: 16px;
-  background: rgba(20, 17, 14, 0.78);
+  padding: 12px;
+  background: rgba(20, 17, 14, 0.82);
 }
 
 .card-modal-panel {
-  width: min(440px, 100%);
-  max-height: min(94vh, 980px);
+  width: min(480px, 100%);
+  max-height: min(96vh, 1040px);
   overflow: auto;
   background: var(--paper);
   border: 2px solid var(--ink);
-  padding: 14px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -571,15 +660,15 @@ button[aria-pressed="true"] {
   margin: 0;
   color: var(--cinnabar);
   text-align: center;
-  font-size: 16px;
-  line-height: 20px;
+  font-size: 18px;
+  line-height: 22px;
 }
 
 .card-modal-frame {
   background: #14110e;
   border: 1px solid var(--ink);
   padding: 10px;
-  max-height: min(64vh, 640px);
+  max-height: min(70vh, 720px);
   overflow: auto;
 }
 

@@ -7,6 +7,20 @@ import { nextCheatStep } from "../src/textSize.js";
 
 const ALLOWED = new Set(["needle", "letter", "scale", "pill", "acid_smear", "blade"]);
 
+function fullBrew(overrides = {}) {
+  return {
+    hongre: 2,
+    hanyin: 1,
+    qingre: 0,
+    xuelian: 0,
+    pishuang: 0,
+    gouwen: 0,
+    langdu: 0,
+    setAside: "xuelian",
+    ...overrides
+  };
+}
+
 function solve(state, options = {}) {
   if (state.phase === 1) {
     for (const token of ["zhen", "dui", "kan"]) {
@@ -30,7 +44,16 @@ function solve(state, options = {}) {
     state = reduce(state, {
       type: "submit",
       puzzleId: "brew",
-      recipe: { hongre: 2, hanyin: 1, qingre: 0, xuelian: 0, setAsideSnow: options.setAsideSnow ?? true }
+      recipe: {
+        hongre: 2,
+        hanyin: 1,
+        qingre: 0,
+        xuelian: 0,
+        pishuang: 0,
+        gouwen: 0,
+        langdu: 0,
+        setAside: options.setAsideSnow === false ? null : (options.setAside ?? "xuelian")
+      }
     });
   } else if (state.phase === 6) {
     state = reduce(state, { type: "sequenceReorder", order: ["lineA", "lineB", "lineC", "lineD"] });
@@ -294,7 +317,7 @@ test("藥架沒使用秤不能配，配錯一次只說一個原因", () => {
   const early = reduce(state, {
     type: "submit",
     puzzleId: "brew",
-    recipe: { hongre: 2, hanyin: 1, qingre: 0, xuelian: 0, setAsideSnow: true }
+    recipe: fullBrew({ setAside: "xuelian" })
   });
   assert.deepEqual(early.log, ["brew.fail.scale"]);
   assert.equal(early.beat, "play");
@@ -303,21 +326,43 @@ test("藥架沒使用秤不能配，配錯一次只說一個原因", () => {
   const qing = reduce(weighed, {
     type: "submit",
     puzzleId: "brew",
-    recipe: { hongre: 2, hanyin: 1, qingre: 2, xuelian: 2, setAsideSnow: true }
+    recipe: fullBrew({ qingre: 2, xuelian: 2, setAside: "xuelian" })
   });
   assert.deepEqual(qing.log, ["brew.fail.qing"]);
   const snow = reduce(weighed, {
     type: "submit",
     puzzleId: "brew",
-    recipe: { hongre: 2, hanyin: 1, qingre: 0, xuelian: 1, setAsideSnow: true }
+    recipe: fullBrew({ xuelian: 1, setAside: "xuelian" })
   });
   assert.deepEqual(snow.log, ["brew.fail.snow"]);
+  const extra = reduce(weighed, {
+    type: "submit",
+    puzzleId: "brew",
+    recipe: fullBrew({ langdu: 1, setAside: "xuelian" })
+  });
+  assert.deepEqual(extra.log, ["brew.fail.extra"]);
   const ratio = reduce(weighed, {
     type: "submit",
     puzzleId: "brew",
-    recipe: { hongre: 0, hanyin: 0, qingre: 0, xuelian: 0, setAsideSnow: true }
+    recipe: fullBrew({ hongre: 0, hanyin: 0, setAside: "xuelian" })
   });
   assert.deepEqual(ratio.log, ["brew.fail.ratio"]);
+});
+
+test("銅人點假穴失敗；棋盤假動作失敗；別置狼毒無丹", () => {
+  let bronze = playing(2);
+  bronze = reduce(bronze, { type: "useItem", itemId: "needle" });
+  const fakeHole = reduce(bronze, { type: "sequencePush", puzzleId: "acupoint", token: "tiantu" });
+  assert.deepEqual(fakeHole.sequences.acupoint, []);
+  assert.deepEqual(fakeHole.log, ["acupoint.fail"]);
+
+  const fakeKo = reduce(playing(4), { type: "sequencePush", puzzleId: "ko", token: "seize" });
+  assert.deepEqual(fakeKo.sequences.ko, []);
+  assert.deepEqual(fakeKo.log, ["ko.fail"]);
+
+  const wrongAside = solve(playing(5), { setAside: "langdu" });
+  assert.equal(wrongAside.inventory.includes("pill"), false);
+  assert.deepEqual(wrongAside.log, ["clear.5.none.a"]);
 });
 
 test("雪蓮不別置的過關文案說掌心沒有丹", () => {

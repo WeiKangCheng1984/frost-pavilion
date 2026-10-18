@@ -16,6 +16,12 @@ for (const chunk of chunks) {
   lines[id] = text.includes("\n") ? text.split("\n") : [text];
 }
 
+/** 稿內以「（……）」註記不用的提示，同步成空字串。 */
+function hintText(id) {
+  const text = lines[id]?.[0] ?? "";
+  return !text || text.startsWith("（") ? "" : text;
+}
+
 const header = `/** 純資料。關卡推進不寫在這個檔案。由 scripts/sync-content.mjs 從文案稿.md 同步 lines／hints。 */
 
 export const timerMs = 60000;
@@ -41,9 +47,12 @@ export const trigrams = [
 ];
 
 export const acupoints = [
+  { id: "tiantu", label: "天突" },
   { id: "shanzhong", label: "膻中" },
+  { id: "zhongwan", label: "中脘" },
   { id: "jiuwei", label: "鳩尾" },
-  { id: "qihai", label: "氣海" }
+  { id: "qihai", label: "氣海" },
+  { id: "guanyuan", label: "關元" }
 ];
 
 export const elements = [
@@ -57,14 +66,20 @@ export const elements = [
 export const herbs = [
   { id: "hongre", name: "鶴頂紅", tag: "紅熱" },
   { id: "hanyin", name: "相思子", tag: "寒引" },
+  { id: "pishuang", name: "砒霜", tag: "白寒" },
   { id: "xuelian", name: "雪蓮花", tag: "可解" },
-  { id: "qingre", name: "斷腸草", tag: "青熱" }
+  { id: "gouwen", name: "鉤吻", tag: "紫熱" },
+  { id: "qingre", name: "斷腸草", tag: "青熱" },
+  { id: "langdu", name: "狼毒", tag: "苦寒" }
 ];
 
 export const koMoves = [
   { id: "take", label: "提子" },
+  { id: "seize", label: "提劫" },
   { id: "retake", label: "對方提回" },
+  { id: "pass", label: "虛手" },
   { id: "elsewhere", label: "別處落子" },
+  { id: "stick", label: "粘回" },
   { id: "fill", label: "填回原點" }
 ];
 
@@ -119,11 +134,14 @@ export const puzzles = {
 export const brew = {
   phase: 5,
   requires: ["scale"],
-  recipe: { hongre: 2, hanyin: 1, qingre: 0, xuelian: 0 },
+  recipe: { hongre: 2, hanyin: 1, qingre: 0, xuelian: 0, pishuang: 0, gouwen: 0, langdu: 0 },
+  asideCorrect: "xuelian",
   blockedLine: "brew.fail.scale",
   failQing: "brew.fail.qing",
   failSnow: "brew.fail.snow",
+  failExtra: "brew.fail.extra",
   failRatio: "brew.fail.ratio",
+  asideChoices: ["xuelian", "langdu", "qingre"],
   successLine: "brew.success",
   askLine: "brew.askSmear"
 };
@@ -171,20 +189,20 @@ export const passages = {
 };
 
 export const hints = {
-  passage: ${JSON.stringify(lines["hints.passage"]?.[0] ?? "這段還停在半途。")},
-  letter: ${JSON.stringify(lines["hints.letter"]?.[0] ?? "")},
-  smear: ${JSON.stringify(lines["hints.smear"]?.[0] ?? "")},
-  blade: ${JSON.stringify(lines["hints.blade"]?.[0] ?? "")},
-  bagua: ${JSON.stringify(lines["hints.bagua"]?.[0] ?? "")},
-  needleMissing: ${JSON.stringify(lines["hints.needleMissing"]?.[0] ?? "")},
-  needleSheathed: ${JSON.stringify(lines["hints.needleSheathed"]?.[0] ?? "")},
-  needleReady: ${JSON.stringify(lines["hints.needleReady"]?.[0] ?? "")},
-  wuxing: ${JSON.stringify(lines["hints.wuxing"]?.[0] ?? "")},
-  ko: ${JSON.stringify(lines["hints.ko"]?.[0] ?? "")},
-  brew: ${JSON.stringify(lines["hints.brew"]?.[0] ?? "")},
-  sword: ${JSON.stringify(lines["hints.sword"]?.[0] ?? "")},
-  finaleLocked: ${JSON.stringify(lines["hints.finaleLocked"]?.[0] ?? "")},
-  finale: ${JSON.stringify(lines["hints.finale"]?.[0] ?? "")}
+  passage: ${JSON.stringify(hintText("hints.passage"))},
+  letter: ${JSON.stringify(hintText("hints.letter"))},
+  smear: ${JSON.stringify(hintText("hints.smear"))},
+  blade: ${JSON.stringify(hintText("hints.blade"))},
+  bagua: ${JSON.stringify(hintText("hints.bagua"))},
+  needleMissing: ${JSON.stringify(hintText("hints.needleMissing"))},
+  needleSheathed: ${JSON.stringify(hintText("hints.needleSheathed"))},
+  needleReady: ${JSON.stringify(hintText("hints.needleReady"))},
+  wuxing: ${JSON.stringify(hintText("hints.wuxing"))},
+  ko: ${JSON.stringify(hintText("hints.ko"))},
+  brew: ${JSON.stringify(hintText("hints.brew"))},
+  sword: ${JSON.stringify(hintText("hints.sword"))},
+  finaleLocked: ${JSON.stringify(hintText("hints.finaleLocked"))},
+  finale: ${JSON.stringify(hintText("hints.finale"))}
 };
 
 export const lines = ${JSON.stringify(lines, null, 2)};

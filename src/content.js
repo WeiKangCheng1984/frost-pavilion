@@ -23,9 +23,12 @@ export const trigrams = [
 ];
 
 export const acupoints = [
+  { id: "tiantu", label: "天突" },
   { id: "shanzhong", label: "膻中" },
+  { id: "zhongwan", label: "中脘" },
   { id: "jiuwei", label: "鳩尾" },
-  { id: "qihai", label: "氣海" }
+  { id: "qihai", label: "氣海" },
+  { id: "guanyuan", label: "關元" }
 ];
 
 export const elements = [
@@ -39,14 +42,20 @@ export const elements = [
 export const herbs = [
   { id: "hongre", name: "鶴頂紅", tag: "紅熱" },
   { id: "hanyin", name: "相思子", tag: "寒引" },
+  { id: "pishuang", name: "砒霜", tag: "白寒" },
   { id: "xuelian", name: "雪蓮花", tag: "可解" },
-  { id: "qingre", name: "斷腸草", tag: "青熱" }
+  { id: "gouwen", name: "鉤吻", tag: "紫熱" },
+  { id: "qingre", name: "斷腸草", tag: "青熱" },
+  { id: "langdu", name: "狼毒", tag: "苦寒" }
 ];
 
 export const koMoves = [
   { id: "take", label: "提子" },
+  { id: "seize", label: "提劫" },
   { id: "retake", label: "對方提回" },
+  { id: "pass", label: "虛手" },
   { id: "elsewhere", label: "別處落子" },
+  { id: "stick", label: "粘回" },
   { id: "fill", label: "填回原點" }
 ];
 
@@ -101,11 +110,14 @@ export const puzzles = {
 export const brew = {
   phase: 5,
   requires: ["scale"],
-  recipe: { hongre: 2, hanyin: 1, qingre: 0, xuelian: 0 },
+  recipe: { hongre: 2, hanyin: 1, qingre: 0, xuelian: 0, pishuang: 0, gouwen: 0, langdu: 0 },
+  asideCorrect: "xuelian",
   blockedLine: "brew.fail.scale",
   failQing: "brew.fail.qing",
   failSnow: "brew.fail.snow",
+  failExtra: "brew.fail.extra",
   failRatio: "brew.fail.ratio",
+  asideChoices: ["xuelian", "langdu", "qingre"],
   successLine: "brew.success",
   askLine: "brew.askSmear"
 };
@@ -153,19 +165,19 @@ export const passages = {
 };
 
 export const hints = {
-  passage: "這段還停在半途。",
+  passage: "",
   letter: "信還攤著。合上，香才再燒。",
   smear: "碗底那一點，不刮就冷了。",
   blade: "短刃可以取，也可以留在這裡。",
   bagua: "詩在壁上。方位，你再看一眼。",
   needleMissing: "袖裡沒有針。",
   needleSheathed: "針還在囊裡。",
-  needleReady: "舊訣被刮了。穴名在孔旁。",
+  needleReady: "六個孔。底座那句才算數。",
   wuxing: "五塊裡只走四步。詩在壁上。",
-  ko: "盤側那句，你還記得。",
-  brew: "殘卷、標籤，還有囊裡那桿秤。",
+  ko: "盤側舊刻，別被後添的字帶走。",
+  brew: "殘卷為準。假籤、假批，都有。",
   sword: "四句還沒站到一起。",
-  finaleLocked: "他的話還沒說完。",
+  finaleLocked: "",
   finale: "白的是火，青的是門。囊裡那些，是你自己的事。"
 };
 
@@ -201,13 +213,13 @@ export const lines = {
     "銅人立在前面，你懷疑這針有用。"
   ],
   "enter.2.a": [
-    "眼前的銅人矮你半個頭，胸口有三個孔。穴名刻在旁邊。"
+    "眼前的銅人矮你半個頭，身上有六個孔。穴名刻在旁邊，有的字口新些。"
   ],
   "enter.2.b": [
-    "胸口那行「由上至下」被人刮壞了。照著身子由上往下刺，是錯的。"
+    "胸口那行「由上至下」被人刮壞了。硃砂另寫「先刺天突」——那行墨色最新，像故意留的。"
   ],
   "enter.2.c": [
-    "底座寫著：先開丹田之海，再啟胸前之門，針停於兩者之間。"
+    "底座寫著：先開丹田之海，再啟胸前之門，針停於兩者之間。關元旁也刻了海字，別被它騙。"
   ],
   "clear.2.a": [
     "最後一孔吞進針，底座應了一聲。地面裂開，五塊磚露出來。"
@@ -228,10 +240,10 @@ export const lines = {
     "仇人沒有坐在對面，這盤卻把路擋住了。"
   ],
   "enter.4.a": [
-    "棋盤側邊寫著：兩子輪流提，提完的人，不能立刻把原點填回去。"
+    "棋盤側邊寫著：兩子輪流提，提完不能立刻填回。後頭又被人添了「提劫亦算」——筆跡不同。"
   ],
   "enter.4.b": [
-    "要先在別處落一子，然後才回到原點。你把這句在心裡念了一遍。棋罐是空的。"
+    "罐底另刻粘回可破，虛手那格是後來補的。要先在別處落一子，再回到原點——盤側這句，才像原來的。"
   ],
   "clear.4.a": [
     "最後一手落下，棋盤翻開。底下有一封發黃的信，還有一桿秤。信還合著，紙角有著異樣的溫度。"
@@ -243,13 +255,13 @@ export const lines = {
     "秤如果還擱在囊裡，份數就只是猜，猜的東西，或許不適合倒進碗裡。"
   ],
   "enter.5.a": [
-    "架上有四味，名字都很兇。你認的不是藥性，是旁邊貼心的標籤。"
+    "架上有七味，名字都很兇。標籤有的舊、有的新，殘卷與架籤未必同聲。"
   ],
   "enter.5.b": [
     "份數在殘卷上。秤還在囊裡，沒稱過的碗，你能放心?"
   ],
   "enter.5.c": [
-    "雪蓮若要別置，就不需要在碗裡。青熱不該留下。配錯了，這碗就作廢，架上還能再取一個新的。"
+    "雪蓮若要別置，就不需要在碗裡。有人旁批「苦寒亦可別置」——那行是後加的。青熱不該留下。配錯了，這碗就作廢。"
   ],
   "clear.5.with.a": [
     "藥碰上了鎖，鏈節就這樣開了。雪蓮留在碗外，像把一句話留在唇邊。掌心多了一枚丹。"
@@ -345,7 +357,7 @@ export const lines = {
     "底座旋開。地下是五行磚。"
   ],
   "bronze.inspect": [
-    "氣海在腹上，是丹田之海。膻中在胸前，是胸前之門。鳩尾在兩者之間。胸口「由上至下」已刮壞。"
+    "氣海在腹上，是丹田之海。膻中在胸前，是胸前之門。鳩尾在兩者之間。天突、中脘、關元也開著孔——底座沒點它們的名。"
   ],
   "wuxing.fail": [
     "暗箭擦過袖口。這一腳不是詩裡的下一步。"
@@ -360,7 +372,7 @@ export const lines = {
     "木困荒土，土逢寒水。水遏熾火，火爍頑金。"
   ],
   "ko.hint": [
-    "兩子輪流提。提完不可立刻填回原點。先在別處落一子，再回來。"
+    "盤側舊刻：兩子輪流提，提完不可立刻填回，先在別處落一子，再回來。提劫、粘回、虛手——像後人添的。"
   ],
   "ko.fail": [
     "這一手不對。棋子歸位了。"
@@ -423,10 +435,10 @@ export const lines = {
     "手裡什麼都沒有。"
   ],
   "brew.scroll": [
-    "紅熱二，寒引一。可解別置，不要倒進碗。青熱棄之。"
+    "紅熱二，寒引一。可解唯雪蓮可別置，不要倒進碗。青熱棄之。白寒、紫熱、苦寒皆勿入。旁批「苦寒亦可別置」是後加的。"
   ],
   "brew.herbs": [
-    "鶴頂紅是紅熱，相思子是寒引。雪蓮花可解，斷腸草是青熱。"
+    "鶴頂紅紅熱，相思子寒引，雪蓮可解，斷腸青熱。砒霜白寒，鉤吻紫熱，狼毒苦寒——狼毒旁另貼一張可解，墨色最新。"
   ],
   "brew.fail.scale": [
     "秤還擱在囊裡。這碗你稱不準。"
@@ -436,6 +448,9 @@ export const lines = {
   ],
   "brew.fail.snow": [
     "可解要放在碗外。倒進去，碗就廢了。"
+  ],
+  "brew.fail.extra": [
+    "碗裡多了不該有的味。碗廢了，還能再取。"
   ],
   "brew.fail.ratio": [
     "紅熱和寒引對不上。碗廢了，還能再取。"
@@ -594,7 +609,7 @@ export const lines = {
     "許多年後，路過的人只當這裡是塌過的一截山。信從未出閣，像從未寫過。"
   ],
   "hints.passage": [
-    "這段還停在半途。"
+    "（敘事拍留白，此則不用。）"
   ],
   "hints.letter": [
     "信還攤著。合上，香才再燒。"
@@ -615,22 +630,22 @@ export const lines = {
     "針還在囊裡。"
   ],
   "hints.needleReady": [
-    "舊訣被刮了。穴名在孔旁。"
+    "六個孔。底座那句才算數。"
   ],
   "hints.wuxing": [
     "五塊裡只走四步。詩在壁上。"
   ],
   "hints.ko": [
-    "盤側那句，你還記得。"
+    "盤側舊刻，別被後添的字帶走。"
   ],
   "hints.brew": [
-    "殘卷、標籤，還有囊裡那桿秤。"
+    "殘卷為準。假籤、假批，都有。"
   ],
   "hints.sword": [
     "四句還沒站到一起。"
   ],
   "hints.finaleLocked": [
-    "他的話還沒說完。"
+    "（長老還在說時留白，此則不用。）"
   ],
   "hints.finale": [
     "白的是火，青的是門。囊裡那些，是你自己的事。"

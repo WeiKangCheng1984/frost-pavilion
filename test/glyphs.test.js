@@ -44,7 +44,7 @@ test("失敗句不把正確序列念出來", () => {
   assert.equal(joined("wuxing.fail").includes("木困"), false);
   assert.equal(joined("ko.fail").includes("別處"), false);
   assert.equal(joined("ko.fail").includes("劫"), false);
-  for (const id of ["brew.fail.scale", "brew.fail.qing", "brew.fail.snow", "brew.fail.ratio"]) {
+  for (const id of ["brew.fail.scale", "brew.fail.qing", "brew.fail.snow", "brew.fail.extra", "brew.fail.ratio"]) {
     assert.equal(/[0-9]/.test(joined(id)), false, id);
   }
   assert.equal(joined("sword.fail").includes("冤"), false);

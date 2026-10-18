@@ -299,17 +299,24 @@ function clearLine(state, inventory) {
   return passages.clear[state.phase][0];
 }
 
+function asideOf(recipe) {
+  if (!recipe) return null;
+  if (typeof recipe.setAside === "string" && recipe.setAside) return recipe.setAside;
+  if (recipe.setAsideSnow) return brew.asideCorrect;
+  return null;
+}
+
 function brewOk(input) {
   if (!input) return false;
-  return input.hongre === brew.recipe.hongre
-    && input.hanyin === brew.recipe.hanyin
-    && input.qingre === brew.recipe.qingre
-    && input.xuelian === brew.recipe.xuelian;
+  return Object.entries(brew.recipe).every(([id, amount]) => Number(input[id] ?? 0) === amount);
 }
 
 function brewFailLine(recipe) {
   if (recipe?.qingre) return brew.failQing;
   if (recipe?.xuelian) return brew.failSnow;
+  if ((recipe?.pishuang || 0) > 0 || (recipe?.gouwen || 0) > 0 || (recipe?.langdu || 0) > 0) {
+    return brew.failExtra;
+  }
   return brew.failRatio;
 }
 
@@ -319,7 +326,9 @@ function submitBrew(state, recipe) {
     return { ...state, log: [brew.blockedLine] };
   }
   if (!brewOk(recipe)) return { ...state, log: [brewFailLine(recipe)] };
-  const inventory = recipe?.setAsideSnow ? gain(state.inventory, "pill") : state.inventory;
+  const inventory = asideOf(recipe) === brew.asideCorrect
+    ? gain(state.inventory, "pill")
+    : state.inventory;
   return {
     ...state,
     beat: "clear",

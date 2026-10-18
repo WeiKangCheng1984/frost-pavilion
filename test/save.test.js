@@ -30,7 +30,11 @@ function solve(state) {
     for (const token of ["take", "retake", "elsewhere", "fill"]) state = reduce(state, { type: "sequencePush", puzzleId: "ko", token });
   } else if (state.phase === 5) {
     state = reduce(state, { type: "useItem", itemId: "scale" });
-    state = reduce(state, { type: "submit", puzzleId: "brew", recipe: { hongre: 2, hanyin: 1, qingre: 0, xuelian: 0, setAsideSnow: false } });
+    state = reduce(state, {
+      type: "submit",
+      puzzleId: "brew",
+      recipe: { hongre: 2, hanyin: 1, qingre: 0, xuelian: 0, pishuang: 0, gouwen: 0, langdu: 0, setAside: null }
+    });
   } else if (state.phase === 6) {
     state = reduce(state, { type: "sequenceReorder", order: ["lineA", "lineB", "lineC", "lineD"] });
     state = reduce(state, { type: "submit", puzzleId: "sword" });

@@ -41,9 +41,12 @@ export function paintStage(canvas, scene, overlay = {}) {
   const ctx = canvas.getContext("2d");
   if (!ctx || !sheetReady) return;
   ctx.imageSmoothingEnabled = false;
-  const shake = overlay.shake ? ((Math.floor(performance.now() / 40) % 2) * 2 - 1) : 0;
+  const shakeLv = Number(overlay.shake) || 0;
+  const tick = Math.floor(performance.now() / (shakeLv >= 2 ? 28 : 40));
+  const shakeX = shakeLv ? ((tick % 3) - 1) * shakeLv : 0;
+  const shakeY = shakeLv >= 2 ? ((Math.floor(tick / 2) % 2) * 2 - 1) : 0;
   ctx.save();
-  ctx.translate(shake, 0);
+  ctx.translate(shakeX, shakeY);
   ctx.fillStyle = "#14110e";
   ctx.fillRect(-2, 0, STAGE_W + 4, STAGE_H);
 

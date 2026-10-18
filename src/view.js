@@ -1,4 +1,4 @@
-import { acupoints, elements, endingNames, herbs, hints, items, koMoves, lines, passages, trigrams, verses } from "./content.js";
+import { acupoints, brew, elements, endingNames, herbs, hints, items, koMoves, lines, passages, trigrams, verses } from "./content.js";
 import { endingKickerId, endingPageIds } from "./endings.js";
 import { glanceOpen } from "./reduce.js";
 import { animBusy, noteInspect, setReducedMotion, stageView, syncAnim } from "./anim.js";
@@ -35,6 +35,16 @@ const LABELS = Object.fromEntries([
   ...elements.map((item) => [item.id, item.label]),
   ...koMoves.map((item) => [item.id, item.label])
 ]);
+
+/** 底欄「使用」短名，避免長物名擠爆手機底欄 */
+const GRIP = {
+  needle: "銀針",
+  letter: "密信",
+  scale: "秤",
+  pill: "丹",
+  acid_smear: "餘膏",
+  blade: "短刃"
+};
 
 const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 let reducedMotion = motionQuery.matches;
@@ -133,13 +143,20 @@ export function paintFrame(state, now = performance.now()) {
     wasAnimBusy = busy;
     chromeKey = "";
     if (latest) paintChrome();
+    else {
+      paintAdvance();
+      paintRetreat();
+    }
+  } else {
+    paintAdvance();
+    paintRetreat();
   }
-  paintAdvance();
-  paintRetreat();
 }
 
 function emptyBrew() {
-  return { hongre: 0, hanyin: 0, qingre: 0, xuelian: 0, setAsideSnow: false };
+  const form = { setAside: null };
+  for (const herb of herbs) form[herb.id] = 0;
+  return form;
 }
 
 function clearPassage(state) {
@@ -177,6 +194,13 @@ function speechPace(len) {
 function markSpeechReady() {
   speech.ready = true;
   paintSpeech();
+  paintAdvance();
+  if (latest) {
+    paintHint(latest.state);
+    if (glanceOpen(latest.state) || latest.state.ending) {
+      document.querySelector(".speech-wrap")?.scrollIntoView({ block: "nearest" });
+    }
+  }
 }
 
 function beginSpeech(rows, key) {
@@ -215,6 +239,8 @@ function finishSpeech() {
   speech.done = true;
   speech.ready = true;
   paintSpeech();
+  paintAdvance();
+  if (latest) paintHint(latest.state);
 }
 
 let speechPaint = "";
@@ -241,9 +267,8 @@ function paintSpeech() {
 
 function passageLabel(state) {
   if (animBusy()) return "";
-  if (glanceOpen(state) && state.phase === 7 && state.beat === "play" && !state.flags.letterOpen) {
-    return "繼續";
-  }
+  /* 調查／窺閣一瞥：任何關都要能「繼續」收束，否則會卡死 */
+  if (glanceOpen(state)) return "繼續";
   const ids = pageIdsFor(state);
   if (!ids) return "";
   if (state.phase === "ending") {
@@ -265,9 +290,11 @@ function paintAdvance() {
   const state = latest?.state;
   if (!button || !state) return;
   const label = speech.ready ? passageLabel(state) : "";
-  button.hidden = !label;
+  const show = Boolean(label);
+  button.hidden = !show;
   button.textContent = label || "繼續";
   button.classList.add("btn-primary");
+  button.classList.toggle("is-pulse", show && glanceOpen(state));
 }
 
 function paintRetreat() {
@@ -304,21 +331,16 @@ function paintChrome() {
   document.querySelector("#inspect").hidden = ended;
   document.querySelector("#use").hidden = ended;
   paintRestart(state, ended);
-  const use = document.querySelector("#use");
-  if (use) {
-    const blocked = !inPlay || Boolean(state.pending) || glanceOpen(state) || animBusy();
-    use.disabled = blocked;
-    use.title = blocked
-      ? "此時不可使用"
-      : selected
-        ? `使用：${items[selected] ?? selected}`
-        : "先於囊中點選物品";
-  }
+  paintUseButton(inPlay, state);
   const inspectBtn = document.querySelector("#inspect");
   if (inspectBtn) {
     const inspectBlocked = !inPlay || Boolean(state.pending) || glanceOpen(state) || animBusy() || ended;
     inspectBtn.disabled = inspectBlocked;
-    inspectBtn.title = inspectBlocked ? "此時不可調查" : "調查眼前或囊中之物";
+    inspectBtn.title = inspectBlocked
+      ? ""
+      : selected
+        ? `調查：${items[selected] ?? selected}`
+        : "調查眼前之物";
     inspectBtn.setAttribute("aria-expanded", String(inspectOpen));
   }
   document.querySelector("#close-letter").hidden = true;
@@ -342,6 +364,30 @@ function paintChrome() {
 
 function isWideLayout() {
   return window.matchMedia("(min-width: 720px)").matches;
+}
+
+function paintUseButton(inPlay, state) {
+  const use = document.querySelector("#use");
+  if (!use) return;
+  const blocked = !inPlay || Boolean(state.pending) || glanceOpen(state) || animBusy();
+  const grip = selected ? (GRIP[selected] ?? items[selected] ?? selected) : "";
+  use.disabled = blocked;
+  use.textContent = grip ? `用·${grip}` : "使用";
+  use.setAttribute("aria-pressed", String(Boolean(selected)));
+  use.title = blocked
+    ? ""
+    : grip
+      ? `使用：${items[selected] ?? selected}`
+      : "先於囊中點選物品";
+}
+
+/** 擋操作時不寫系統旁白；若該按「繼續」，輕點一下底欄按鈕。 */
+function cueContinue() {
+  const btn = document.querySelector("#advance");
+  if (!btn || btn.hidden) return;
+  btn.classList.remove("is-cue");
+  void btn.offsetWidth;
+  btn.classList.add("is-cue");
 }
 
 function paintBagChrome() {
@@ -398,11 +444,13 @@ function paintRestart(state, ended) {
   restartDelayKey = key;
   window.clearTimeout(restartDelayTimer);
   wrap.hidden = true;
-  const delay = reducedMotion ? 0 : 1200;
+  /* 結局末頁靜場一息，再出下載／重開（約 1.5～2 秒） */
+  const delay = reducedMotion ? 0 : 1700;
   restartDelayTimer = window.setTimeout(() => {
-    if (latest?.state?.ending === state.ending && latest.state.page === state.page) {
+    if (latest?.state?.ending === state.ending && latest.state.page === state.page && speech.ready) {
       wrap.hidden = false;
       openBag();
+      wrap.scrollIntoView({ block: "nearest" });
     }
   }, delay);
 }
@@ -463,33 +511,30 @@ function paintScene(state, now = performance.now()) {
 
 function progressText(state) {
   if (state.flags.letterOpen) return "信還攤在手上。";
-  if (state.beat === "cheat" || state.beat === "prologue" || state.beat === "enter" || state.beat === "clear") return "這段還沒說完。";
+  /* 敘事拍：頂欄留白，不寫「還沒說完」類系統句 */
+  if (state.beat === "cheat" || state.beat === "prologue" || state.beat === "enter" || state.beat === "clear") return "";
   if (state.beat === "offer" && state.phase === 5) return "碗底還留著餘膏。";
   if (state.beat === "offer" && state.phase === 6) return "短刃還掛在屏風旁。";
   if (state.phase >= 1 && state.phase <= 4) {
     const sequence = currentSequence(state);
-    if (sequence.length === 0) return "尚未按下。";
-    return `已按 ${sequence.map((id) => LABELS[id] ?? id).join("、")}`;
+    if (sequence.length === 0) return "";
+    return sequence.map((id) => LABELS[id] ?? id).join("、");
   }
   if (state.phase === 5) return doseSummary();
-  if (state.phase === 6) return "排好四句再提交。";
+  if (state.phase === 6) return "";
   if (state.ending) return endingNames[state.ending];
-  if (!state.flags.introDone) return "他的話還沒說完。";
+  if (!state.flags.introDone) return "";
   if (state.timer?.pausedByLetter) return "讀信時，香暫停。";
   if (state.flags.chainsFreed) return "鏈開了。青龍才是兩人走的路。";
   if (state.flags.pillPlaced) return "丹留下了。青龍是你一個人走的門。";
-  return hints.finale;
+  return "";
 }
 
 function doseSummary() {
-  const tags = [
-    ["hongre", "紅熱"],
-    ["hanyin", "寒引"],
-    ["qingre", "青熱"],
-    ["xuelian", "可解"]
-  ];
-  const text = tags.map(([id, tag]) => `${tag}${brewForm[id]}`).join(" ");
-  return brewForm.setAsideSnow ? `${text} 已別置` : text;
+  const text = herbs.map((herb) => `${herb.tag}${brewForm[herb.id] ?? 0}`).join(" ");
+  if (!brewForm.setAside) return text;
+  const picked = herbs.find((herb) => herb.id === brewForm.setAside);
+  return `${text} 別置${picked?.name ?? brewForm.setAside}`;
 }
 
 function currentSequence(state) {
@@ -528,12 +573,18 @@ function paintBag(state, send) {
 
 function paintHint(state) {
   const hint = document.querySelector("#hint");
+  if (!hint) return;
   if (hintNudge) {
     hint.textContent = hintNudge;
     return;
   }
+  /* 換景、打字、未收的一瞥、敘事拍：框下留白，由對白與「繼續」承擔 */
+  if (animBusy() || glanceOpen(state) || !speech.ready) {
+    hint.textContent = "";
+    return;
+  }
   if (state.beat === "cheat" || state.beat === "prologue" || state.beat === "enter" || state.beat === "clear") {
-    hint.textContent = hints.passage;
+    hint.textContent = "";
     return;
   }
   if (state.flags.letterOpen) {
@@ -548,6 +599,11 @@ function paintHint(state) {
     hint.textContent = hints.blade;
     return;
   }
+  if (selected && state.beat === "play") {
+    const name = items[selected] ?? selected;
+    hint.textContent = `${name}，握在掌心。`;
+    return;
+  }
   if (state.phase === 1) hint.textContent = hints.bagua;
   else if (state.phase === 2) {
     if (!state.inventory.includes("needle")) hint.textContent = hints.needleMissing;
@@ -557,7 +613,7 @@ function paintHint(state) {
   else if (state.phase === 4) hint.textContent = hints.ko;
   else if (state.phase === 5) hint.textContent = hints.brew;
   else if (state.phase === 6) hint.textContent = hints.sword;
-  else if (!state.flags.introDone) hint.textContent = hints.finaleLocked;
+  else if (!state.flags.introDone) hint.textContent = "";
   else hint.textContent = hints.finale;
 }
 
@@ -570,10 +626,27 @@ function paintInspect(state, send) {
   panel.hidden = !show;
   panel.replaceChildren();
   if (!show) return;
+
+  const head = document.createElement("div");
+  head.className = "inspect-head";
   const lead = document.createElement("p");
   lead.className = "hand-label";
   lead.textContent = "要看何處";
-  panel.append(lead);
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "inspect-close";
+  close.textContent = "合";
+  close.setAttribute("aria-label", "收起調查");
+  close.addEventListener("click", () => {
+    inspectOpen = false;
+    hintNudge = "";
+    repaint();
+  });
+  head.append(lead, close);
+  panel.append(head);
+
+  const row = document.createElement("div");
+  row.className = "inspect-targets";
   for (const item of targets) {
     const button = document.createElement("button");
     button.type = "button";
@@ -586,9 +659,11 @@ function paintInspect(state, send) {
       noteInspect(item.target);
       paintScene(latest.state);
       repaint();
+      document.querySelector(".speech-wrap")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
     });
-    panel.append(button);
+    row.append(button);
   }
+  panel.append(row);
 }
 
 function paintPuzzle(state, send) {
@@ -644,15 +719,34 @@ function paintBrew(parent) {
     }
     parent.append(row);
   }
-  const aside = document.createElement("button");
-  aside.type = "button";
-  aside.textContent = "雪蓮別置";
-  aside.setAttribute("aria-pressed", String(brewForm.setAsideSnow));
-  aside.addEventListener("click", () => {
-    brewForm = { ...brewForm, setAsideSnow: !brewForm.setAsideSnow };
+  const asideRow = document.createElement("div");
+  asideRow.className = "mix aside-row";
+  const asideLabel = document.createElement("span");
+  asideLabel.textContent = "別置";
+  asideRow.append(asideLabel);
+  const none = document.createElement("button");
+  none.type = "button";
+  none.textContent = "無";
+  none.setAttribute("aria-pressed", String(!brewForm.setAside));
+  none.addEventListener("click", () => {
+    brewForm = { ...brewForm, setAside: null };
     repaint();
   });
-  parent.append(aside);
+  asideRow.append(none);
+  for (const id of brew.asideChoices ?? []) {
+    const herb = herbs.find((item) => item.id === id);
+    if (!herb) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = herb.name;
+    button.setAttribute("aria-pressed", String(brewForm.setAside === id));
+    button.addEventListener("click", () => {
+      brewForm = { ...brewForm, setAside: brewForm.setAside === id ? null : id };
+      repaint();
+    });
+    asideRow.append(button);
+  }
+  parent.append(asideRow);
 }
 
 function setDose(id, amount) {
@@ -758,8 +852,14 @@ function bindStatic() {
   document.querySelector("#skip").addEventListener("click", finishSpeech);
   document.querySelector("#advance").addEventListener("click", () => {
     if (!speech.ready || !latest) return;
+    if (animBusy()) {
+      hintNudge = "";
+      paintHint(latest.state);
+      return;
+    }
     focus = null;
     inspectOpen = false;
+    hintNudge = "";
     if (glanceOpen(latest.state)) latest.send({ type: "acknowledge" });
     else latest.send({ type: "advance" });
   });
@@ -791,9 +891,8 @@ function bindStatic() {
       || animBusy()
       || Boolean(state.pending);
     if (blocked) {
-      hintNudge = glanceOpen(state) || !speech.ready
-        ? "這段看完，再調查。"
-        : "此時不可調查。";
+      hintNudge = "";
+      if (glanceOpen(state) || animBusy() || state.beat !== "play") cueContinue();
       paintHint(state);
       return;
     }
@@ -823,15 +922,18 @@ function bindStatic() {
     if (!latest) return;
     const useBtn = document.querySelector("#use");
     if (useBtn?.disabled) {
-      hintNudge = "此時不可使用。";
-      paintHint(latest.state);
+      const st = latest.state;
+      hintNudge = "";
+      if (glanceOpen(st) || animBusy()) cueContinue();
+      paintHint(st);
       return;
     }
     if (!selected) {
-      hintNudge = "先於囊中點選要使用的物品。";
+      hintNudge = "囊裡，先取一件。";
       inspectOpen = false;
       openBag();
       repaint();
+      document.querySelector("#bag")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
       return;
     }
     hintNudge = "";
@@ -879,7 +981,9 @@ function bindStatic() {
     const { state, send } = latest;
     focus = null;
     if (state.phase === 5) {
-      send({ type: "submit", puzzleId: "brew", recipe: { ...brewForm } });
+      const recipe = { ...brewForm };
+      delete recipe.setAsideSnow;
+      send({ type: "submit", puzzleId: "brew", recipe });
     } else if (state.phase === 6 && state.beat === "play") {
       send({ type: "submit", puzzleId: "sword" });
     }

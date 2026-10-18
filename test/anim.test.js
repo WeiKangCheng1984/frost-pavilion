@@ -40,7 +40,8 @@ test("結局進場是起轉收分鏡，會擋操作數秒", () => {
   }, now + 1200);
   assert.ok(FRAME_NAMES.includes(mid.center));
   assert.equal(mid.mood, "ember");
-  assert.equal(animBusy(now + 4500), false);
+  assert.equal(animBusy(now + 100), true);
+  assert.equal(animBusy(now + 7000), false);
 });
 
 test("調查會播窺閣鏡頭", () => {
@@ -123,7 +124,7 @@ test("結局中頁定格不重播大火，空鏡頁再收", () => {
     flags: {},
     log: ["ending.flee.b"],
     timer: null
-  }, now + 5000);
+  }, now + 6000);
   const hold = stageView({
     beat: "ending",
     phase: "ending",
@@ -131,7 +132,7 @@ test("結局中頁定格不重播大火，空鏡頁再收", () => {
     page: 1,
     flags: {},
     log: ["ending.flee.b"]
-  }, now + 5100);
+  }, now + 6100);
   assert.equal(hold.center, "qinglong");
 
   syncAnim({
@@ -142,7 +143,7 @@ test("結局中頁定格不重播大火，空鏡頁再收", () => {
     flags: {},
     log: ["ending.flee.c"],
     timer: null
-  }, now + 7000);
+  }, now + 9000);
   const sky = stageView({
     beat: "ending",
     phase: "ending",
@@ -150,7 +151,7 @@ test("結局中頁定格不重播大火，空鏡頁再收", () => {
     page: 2,
     flags: {},
     log: ["ending.flee.c"]
-  }, now + 7800);
+  }, now + 10500);
   assert.ok(sky.center === "sky" || sky.center === "qinglong");
   assert.equal(sky.mood, "void");
 });

@@ -2,91 +2,104 @@
 
 const FULL_MS = 60000;
 
-/** beats: 起→轉→收。每拍可帶 center／row／mood。 */
+/** beats: 起→轉→再轉→收。每拍可帶 center／row／mood；shake 為 1／2 震動強度。 */
 const CLIPS = {
   door: {
     sound: "door",
+    shake: 1,
     beats: [
-      { center: "door_0", mood: null, ms: 700 },
-      { center: "door_2", mood: null, ms: 900 },
-      { center: "wall", mood: "ash", ms: 1100 }
+      { center: "door_0", mood: "ash", ms: 800 },
+      { center: "door_1", mood: null, ms: 700 },
+      { center: "door_2", mood: "ash", ms: 900 },
+      { center: "wall", mood: "void", ms: 1400 }
     ]
   },
   wolf: {
     sound: "fire",
-    shake: true,
+    shake: 2,
     beats: [
       { center: "fx_fire_0", row: [], mood: "ember", ms: 900 },
-      { center: "baihu", row: ["fx_fire_1"], mood: "ember", ms: 1400 },
-      { center: "baihu", row: [], mood: "void", ms: 1800 }
+      { center: "fx_fire_1", row: ["baihu"], mood: "ember", ms: 1100 },
+      { center: "baihu", row: ["fx_fire_1"], mood: "ash", ms: 1400 },
+      { center: "baihu", row: [], mood: "void", ms: 2000 }
     ]
   },
   flee: {
     sound: "gate",
     beats: [
       { center: "fx_gate_0", row: [], mood: "mist", ms: 900 },
-      { center: "qinglong", row: ["fx_gate_1"], mood: "mist", ms: 1300 },
-      { center: "qinglong", row: [], mood: "cool", ms: 1600 }
+      { center: "fx_gate_1", row: [], mood: "mist", ms: 1000 },
+      { center: "qinglong", row: ["fx_gate_1"], mood: "cool", ms: 1400 },
+      { center: "qinglong", row: [], mood: "void", ms: 1800 }
     ]
   },
   sever: {
     sound: "soft",
     beats: [
-      { center: "fx_pill", row: [], mood: "cool", ms: 800 },
+      { center: "fx_pill", row: [], mood: "cool", ms: 900 },
+      { center: "pill", row: [], mood: "dawn", ms: 1000 },
       { center: "pill", row: ["elder"], mood: "cool", ms: 1400 },
-      { center: "elder", row: ["pill"], mood: "void", ms: 1600 }
+      { center: "elder", row: ["pill"], mood: "void", ms: 1800 }
     ]
   },
   ember: {
     sound: "chain",
     beats: [
       { center: "fx_ember", row: ["chains"], mood: "dawn", ms: 900 },
-      { center: "elder", row: ["qinglong"], mood: "dawn", ms: 1400 },
-      { center: "elder", row: ["qinglong"], mood: "mist", ms: 1700 }
+      { center: "chains", row: ["qinglong"], mood: "dawn", ms: 1000 },
+      { center: "elder", row: ["qinglong"], mood: "mist", ms: 1500 },
+      { center: "elder", row: ["qinglong"], mood: "void", ms: 1800 }
     ]
   },
   buried: {
     sound: "ruin",
-    shake: true,
+    shake: 2,
     beats: [
+      { center: "fuse_1", row: [], mood: "ash", ms: 900 },
       { center: "fuse_2", row: [], mood: "ash", ms: 1000 },
       { center: "fx_ruin_0", row: ["fuse_3"], mood: "void", ms: 1400 },
-      { center: "sky", row: [], mood: "void", ms: 2000 }
+      { center: "fx_ruin_1", row: [], mood: "void", ms: 1200 },
+      { center: "sky", row: [], mood: "void", ms: 2200 }
     ]
   },
   wolfSky: {
     sound: "soft",
     beats: [
-      { center: "baihu", row: [], mood: "void", ms: 800 },
-      { center: "sky", row: [], mood: "void", ms: 2200 }
+      { center: "baihu", row: [], mood: "void", ms: 1000 },
+      { center: "sky", row: [], mood: "void", ms: 1400 },
+      { center: "sky", row: [], mood: "void", ms: 2400 }
     ]
   },
   fleeSky: {
     sound: "soft",
     beats: [
-      { center: "qinglong", row: [], mood: "void", ms: 800 },
-      { center: "sky", row: [], mood: "void", ms: 2200 }
+      { center: "qinglong", row: [], mood: "void", ms: 1000 },
+      { center: "sky", row: [], mood: "void", ms: 1400 },
+      { center: "sky", row: [], mood: "void", ms: 2400 }
     ]
   },
   severSky: {
     sound: "soft",
     beats: [
-      { center: "pill", row: ["elder"], mood: "void", ms: 800 },
-      { center: "sky", row: [], mood: "void", ms: 2200 }
+      { center: "pill", row: ["elder"], mood: "void", ms: 1000 },
+      { center: "sky", row: [], mood: "void", ms: 1400 },
+      { center: "sky", row: [], mood: "void", ms: 2400 }
     ]
   },
   emberSky: {
     sound: "soft",
     beats: [
-      { center: "elder", row: ["qinglong"], mood: "void", ms: 900 },
-      { center: "sky", row: [], mood: "void", ms: 2200 }
+      { center: "elder", row: ["qinglong"], mood: "void", ms: 1100 },
+      { center: "sky", row: [], mood: "void", ms: 1400 },
+      { center: "sky", row: [], mood: "void", ms: 2400 }
     ]
   },
   buriedSky: {
     sound: "fuse",
     beats: [
-      { center: "fuse_3", row: [], mood: "void", ms: 900 },
-      { center: "sky", row: [], mood: "void", ms: 2400 }
+      { center: "fuse_3", row: [], mood: "void", ms: 1100 },
+      { center: "sky", row: [], mood: "void", ms: 1500 },
+      { center: "sky", row: [], mood: "void", ms: 2600 }
     ]
   },
 
@@ -94,57 +107,65 @@ const CLIPS = {
   enter1: {
     sound: "door",
     beats: [
-      { center: "door_1", row: [], mood: "ash", ms: 700 },
-      { center: "wall", row: ["compass"], mood: null, ms: 1000 },
-      { center: "wall", row: ["poem"], mood: "cool", ms: 1000 }
+      { center: "door_1", row: [], mood: "ash", ms: 800 },
+      { center: "wall", row: [], mood: null, ms: 700 },
+      { center: "wall", row: ["compass"], mood: "dawn", ms: 1100 },
+      { center: "wall", row: ["poem"], mood: "cool", ms: 1200 }
     ]
   },
   enter2: {
     sound: "soft",
     beats: [
-      { center: "wall", row: ["needle"], mood: null, ms: 700 },
-      { center: "bronze", row: [], mood: null, ms: 1100 },
-      { center: "bronze", row: ["needle"], mood: "cool", ms: 1000 }
+      { center: "wall", row: ["needle"], mood: null, ms: 800 },
+      { center: "bronze", row: [], mood: "ash", ms: 900 },
+      { center: "bronze", row: ["needle"], mood: null, ms: 1100 },
+      { center: "bronze", row: ["needle"], mood: "cool", ms: 1100 }
     ]
   },
   enter3: {
     sound: "soft",
     beats: [
-      { center: "bronze", row: [], mood: "ash", ms: 600 },
-      { center: "tiles", row: ["wood", "earth"], mood: null, ms: 1000 },
-      { center: "tiles", row: ["water", "fire"], mood: "dawn", ms: 1000 }
+      { center: "bronze", row: [], mood: "ash", ms: 700 },
+      { center: "tiles", row: [], mood: null, ms: 800 },
+      { center: "tiles", row: ["wood", "earth"], mood: "dawn", ms: 1100 },
+      { center: "tiles", row: ["water", "fire"], mood: "ember", ms: 1100 }
     ]
   },
   enter4: {
     sound: "wood",
     beats: [
-      { center: "tiles", row: [], mood: null, ms: 600 },
+      { center: "tiles", row: [], mood: null, ms: 700 },
+      { center: "board", row: [], mood: "ash", ms: 900 },
       { center: "board", row: [], mood: null, ms: 1100 },
-      { center: "board", row: [], mood: "cool", ms: 900 }
+      { center: "board", row: [], mood: "cool", ms: 1100 }
     ]
   },
   enter5: {
     sound: "soft",
     beats: [
-      { center: "board", row: ["letter", "scale"], mood: null, ms: 700 },
-      { center: "shelf", row: [], mood: null, ms: 1100 },
-      { center: "shelf", row: ["scroll"], mood: "dawn", ms: 1000 }
+      { center: "board", row: ["letter", "scale"], mood: null, ms: 800 },
+      { center: "shelf", row: [], mood: "ash", ms: 900 },
+      { center: "shelf", row: ["scroll"], mood: null, ms: 1100 },
+      { center: "shelf", row: ["scroll", "hongre"], mood: "dawn", ms: 1100 }
     ]
   },
   enter6: {
     sound: "door",
     beats: [
-      { center: "bowl", row: [], mood: "ash", ms: 700 },
-      { center: "screen", row: [], mood: null, ms: 1100 },
-      { center: "screen", row: ["blade"], mood: "mist", ms: 1100 }
+      { center: "bowl", row: [], mood: "ash", ms: 800 },
+      { center: "screen", row: [], mood: null, ms: 900 },
+      { center: "screen", row: ["blade"], mood: "mist", ms: 1200 },
+      { center: "screen", row: ["blade"], mood: "void", ms: 1200 }
     ]
   },
   enter7: {
     sound: "soft",
+    shake: 1,
     beats: [
-      { center: "door_2", row: [], mood: "ash", ms: 800 },
-      { center: "elder", row: ["chains"], mood: "ash", ms: 1200 },
-      { center: "elder", row: ["baihu", "qinglong"], mood: "void", ms: 1300 }
+      { center: "door_2", row: [], mood: "ash", ms: 900 },
+      { center: "door_3", row: ["fuse_0"], mood: "ash", ms: 1000 },
+      { center: "elder", row: ["chains"], mood: "ash", ms: 1400 },
+      { center: "elder", row: ["baihu", "qinglong"], mood: "void", ms: 1600 }
     ]
   },
 
@@ -152,57 +173,65 @@ const CLIPS = {
   clear1: {
     sound: "soft",
     beats: [
-      { center: "wall", row: ["zhen", "dui", "kan"], mood: null, ms: 700 },
-      { center: "door_0", row: ["needle"], mood: "dawn", ms: 1100 },
-      { center: "wall", row: ["needle"], mood: null, ms: 900 }
+      { center: "wall", row: ["zhen", "dui", "kan"], mood: "dawn", ms: 800 },
+      { center: "door_0", row: ["zhen", "dui", "kan"], mood: null, ms: 1000 },
+      { center: "door_0", row: ["needle"], mood: "dawn", ms: 1200 },
+      { center: "wall", row: ["needle"], mood: "cool", ms: 1100 }
     ]
   },
   clear2: {
     sound: "needle",
     beats: [
-      { center: "bronze", row: ["needle"], mood: null, ms: 700 },
-      { center: "bronze", row: [], mood: "cool", ms: 1000 },
-      { center: "tiles", row: [], mood: "ash", ms: 1000 }
+      { center: "bronze", row: ["needle"], mood: null, ms: 800 },
+      { center: "bronze", row: ["needle"], mood: "cool", ms: 1100 },
+      { center: "bronze", row: [], mood: "ash", ms: 1000 },
+      { center: "tiles", row: [], mood: "ash", ms: 1100 }
     ]
   },
   clear3: {
     sound: "soft",
     beats: [
-      { center: "tiles", row: ["wood", "earth", "water", "fire"], mood: "dawn", ms: 800 },
-      { center: "tiles", row: ["metal"], mood: "ember", ms: 900 },
-      { center: "board", row: [], mood: null, ms: 1000 }
+      { center: "tiles", row: ["wood", "earth", "water", "fire"], mood: "dawn", ms: 900 },
+      { center: "tiles", row: ["metal"], mood: "ember", ms: 1000 },
+      { center: "tiles", row: [], mood: "ash", ms: 900 },
+      { center: "board", row: [], mood: null, ms: 1200 }
     ]
   },
   board: {
     sound: "wood",
     beats: [
-      { center: "board", row: [], mood: null, ms: 700 },
-      { center: "board_open", row: ["letter"], mood: null, ms: 1200 },
-      { center: "letter", row: ["scale"], mood: "dawn", ms: 1100 }
+      { center: "board", row: [], mood: null, ms: 800 },
+      { center: "board_open", row: [], mood: "dawn", ms: 1100 },
+      { center: "board_open", row: ["letter"], mood: null, ms: 1300 },
+      { center: "letter", row: ["scale"], mood: "cool", ms: 1300 }
     ]
   },
   brew: {
     sound: "soft",
     beats: [
-      { center: "bowl_aside", row: ["xuelian"], mood: null, ms: 800 },
-      { center: "pill", row: ["bowl_aside"], mood: "dawn", ms: 1100 },
-      { center: "bowl", row: ["pill"], mood: null, ms: 1000 }
+      { center: "bowl", row: ["xuelian"], mood: null, ms: 800 },
+      { center: "bowl_aside", row: ["xuelian"], mood: "dawn", ms: 1100 },
+      { center: "pill", row: ["bowl_aside"], mood: "dawn", ms: 1200 },
+      { center: "bowl", row: ["pill"], mood: "cool", ms: 1200 }
     ]
   },
   brewNone: {
     sound: "crack",
+    shake: 1,
     beats: [
-      { center: "bowl", row: [], mood: null, ms: 700 },
-      { center: "bowl_aside", row: [], mood: "ash", ms: 900 },
-      { center: "bowl", row: [], mood: "ash", ms: 900 }
+      { center: "bowl", row: [], mood: null, ms: 800 },
+      { center: "bowl_aside", row: [], mood: "ash", ms: 1000 },
+      { center: "bowl", row: [], mood: "ember", ms: 1000 },
+      { center: "bowl", row: [], mood: "ash", ms: 1100 }
     ]
   },
   clear6: {
     sound: "door",
     beats: [
-      { center: "screen", row: [], mood: null, ms: 700 },
-      { center: "door_1", row: ["blade"], mood: "mist", ms: 1200 },
-      { center: "door_3", row: ["fuse_0"], mood: "ash", ms: 1200 }
+      { center: "screen", row: [], mood: null, ms: 800 },
+      { center: "door_1", row: ["blade"], mood: "mist", ms: 1100 },
+      { center: "door_2", row: ["blade"], mood: "ash", ms: 1200 },
+      { center: "door_3", row: ["fuse_0"], mood: "void", ms: 1400 }
     ]
   },
 
@@ -210,173 +239,197 @@ const CLIPS = {
   bagua: {
     sound: "soft",
     beats: [
-      { center: "wall", row: ["zhen", "dui", "kan"], mood: null, ms: 700 },
-      { center: "door_0", row: ["zhen", "dui", "kan"], mood: null, ms: 900 },
-      { center: "wall", row: ["needle"], mood: "dawn", ms: 900 }
+      { center: "wall", row: ["zhen", "dui", "kan"], mood: null, ms: 800 },
+      { center: "door_0", row: ["zhen", "dui", "kan"], mood: "dawn", ms: 1000 },
+      { center: "door_0", row: ["needle"], mood: null, ms: 1100 },
+      { center: "wall", row: ["needle"], mood: "cool", ms: 1100 }
     ]
   },
   needle: {
     sound: "needle",
     beats: [
-      { center: "bronze", row: [], mood: null, ms: 600 },
-      { center: "bronze", row: ["needle"], mood: null, ms: 1000 },
-      { center: "bronze", row: ["needle"], mood: "cool", ms: 900 }
+      { center: "bronze", row: [], mood: null, ms: 700 },
+      { center: "needle", row: [], mood: "cool", ms: 900 },
+      { center: "bronze", row: ["needle"], mood: null, ms: 1200 },
+      { center: "bronze", row: ["needle"], mood: "cool", ms: 1100 }
     ]
   },
   wuxing: {
     sound: "soft",
     beats: [
-      { center: "tiles", row: ["wood", "earth"], mood: null, ms: 700 },
-      { center: "tiles", row: ["water", "fire"], mood: null, ms: 900 },
-      { center: "tiles", row: ["wood", "earth", "water", "fire"], mood: "dawn", ms: 900 }
+      { center: "tiles", row: ["wood", "earth"], mood: null, ms: 800 },
+      { center: "tiles", row: ["water", "fire"], mood: "dawn", ms: 1000 },
+      { center: "tiles", row: ["wood", "earth", "water", "fire"], mood: "ember", ms: 1100 },
+      { center: "tiles", row: ["wood", "earth", "water", "fire"], mood: "cool", ms: 1100 }
     ]
   },
   sword: {
     sound: "soft",
     beats: [
-      { center: "screen", row: [], mood: null, ms: 700 },
-      { center: "screen", row: ["blade"], mood: null, ms: 1000 },
-      { center: "door_1", row: ["blade"], mood: "mist", ms: 1100 }
+      { center: "screen", row: [], mood: null, ms: 800 },
+      { center: "screen", row: ["blade"], mood: "mist", ms: 1100 },
+      { center: "door_1", row: ["blade"], mood: "ash", ms: 1200 },
+      { center: "door_1", row: ["blade"], mood: "void", ms: 1200 }
     ]
   },
   letter: {
     sound: "wood",
     beats: [
-      { center: "letter", row: [], mood: null, ms: 600 },
-      { center: "scroll", row: ["letter"], mood: "cool", ms: 900 },
-      { center: "letter", row: [], mood: "cool", ms: 800 }
+      { center: "letter", row: [], mood: null, ms: 800 },
+      { center: "letter", row: [], mood: "cool", ms: 1000 },
+      { center: "scroll", row: ["letter"], mood: "ash", ms: 1100 },
+      { center: "letter", row: [], mood: "cool", ms: 1100 }
     ]
   },
   chain: {
     sound: "chain",
+    shake: 1,
     beats: [
-      { center: "chains", row: [], mood: null, ms: 600 },
-      { center: "fx_ember", row: ["chains"], mood: "dawn", ms: 1000 },
-      { center: "elder", row: [], mood: "dawn", ms: 900 }
+      { center: "chains", row: [], mood: null, ms: 700 },
+      { center: "fx_ember", row: ["chains"], mood: "dawn", ms: 1100 },
+      { center: "elder", row: ["chains"], mood: "dawn", ms: 1100 },
+      { center: "elder", row: [], mood: "mist", ms: 1200 }
     ]
   },
   placePill: {
     sound: "soft",
     beats: [
-      { center: "pill", row: [], mood: null, ms: 600 },
-      { center: "elder", row: ["pill"], mood: "cool", ms: 1000 },
-      { center: "elder", row: ["pill"], mood: "cool", ms: 900 }
+      { center: "pill", row: [], mood: "dawn", ms: 800 },
+      { center: "pill", row: [], mood: "cool", ms: 900 },
+      { center: "elder", row: ["pill"], mood: "cool", ms: 1200 },
+      { center: "elder", row: ["pill"], mood: "void", ms: 1200 }
     ]
   },
   cheat: {
     sound: "joke",
+    shake: 1,
     beats: [
-      { center: "wall", row: [], mood: null, ms: 600 },
-      { center: "door_0", row: [], mood: null, ms: 900 },
-      { center: "wall", row: ["door_1"], mood: "dawn", ms: 1000 }
+      { center: "wall", row: [], mood: null, ms: 700 },
+      { center: "door_0", row: [], mood: "dawn", ms: 900 },
+      { center: "door_1", row: [], mood: null, ms: 1000 },
+      { center: "wall", row: ["door_1"], mood: "cool", ms: 1200 }
     ]
   },
 
-  // —— 調查：窺閣一眼（場景三拍／道具二拍）——
+  // —— 調查：窺閣（多一拍，鏡頭更有推近感）——
   lookCompass: {
     sound: "soft",
     beats: [
-      { center: "wall", row: [], mood: null, ms: 600 },
-      { center: "compass", row: [], mood: "dawn", ms: 1100 },
-      { center: "wall", row: ["compass"], mood: "cool", ms: 900 }
+      { center: "wall", row: [], mood: null, ms: 700 },
+      { center: "wall", row: ["compass"], mood: "dawn", ms: 900 },
+      { center: "compass", row: [], mood: "dawn", ms: 1300 },
+      { center: "wall", row: ["compass"], mood: "cool", ms: 1100 }
     ]
   },
   lookPoem: {
     sound: "soft",
     beats: [
-      { center: "wall", row: [], mood: "ash", ms: 600 },
-      { center: "poem", row: [], mood: "cool", ms: 1200 },
-      { center: "wall", row: ["poem"], mood: "ash", ms: 900 }
+      { center: "wall", row: [], mood: "ash", ms: 700 },
+      { center: "wall", row: ["poem"], mood: "cool", ms: 900 },
+      { center: "poem", row: [], mood: "cool", ms: 1400 },
+      { center: "wall", row: ["poem"], mood: "ash", ms: 1100 }
     ]
   },
   lookBronze: {
     sound: "needle",
     beats: [
-      { center: "bronze", row: [], mood: null, ms: 700 },
-      { center: "bronze", row: ["needle"], mood: "cool", ms: 1100 },
-      { center: "bronze", row: [], mood: "ash", ms: 900 }
+      { center: "bronze", row: [], mood: null, ms: 800 },
+      { center: "bronze", row: ["needle"], mood: "cool", ms: 1200 },
+      { center: "bronze", row: [], mood: "ash", ms: 1000 },
+      { center: "bronze", row: [], mood: null, ms: 1000 }
     ]
   },
   lookWuxing: {
     sound: "soft",
     beats: [
-      { center: "tiles", row: [], mood: null, ms: 600 },
-      { center: "poem", row: ["metal"], mood: "ember", ms: 1000 },
-      { center: "tiles", row: ["wood", "fire"], mood: "ash", ms: 1000 }
+      { center: "tiles", row: [], mood: null, ms: 700 },
+      { center: "poem", row: ["metal"], mood: "ember", ms: 1100 },
+      { center: "tiles", row: ["wood", "fire"], mood: "ash", ms: 1100 },
+      { center: "tiles", row: [], mood: "cool", ms: 1000 }
     ]
   },
   lookBoard: {
     sound: "wood",
     beats: [
-      { center: "board", row: [], mood: null, ms: 700 },
-      { center: "board", row: [], mood: "cool", ms: 1100 },
-      { center: "board", row: [], mood: null, ms: 900 }
+      { center: "board", row: [], mood: null, ms: 800 },
+      { center: "board", row: [], mood: "cool", ms: 1200 },
+      { center: "board", row: [], mood: "dawn", ms: 1000 },
+      { center: "board", row: [], mood: null, ms: 1000 }
     ]
   },
   lookScroll: {
     sound: "wood",
     beats: [
-      { center: "shelf", row: [], mood: null, ms: 600 },
-      { center: "scroll", row: [], mood: "cool", ms: 1200 },
-      { center: "shelf", row: ["scroll"], mood: "ash", ms: 900 }
+      { center: "shelf", row: [], mood: null, ms: 700 },
+      { center: "shelf", row: ["scroll"], mood: "ash", ms: 900 },
+      { center: "scroll", row: [], mood: "cool", ms: 1400 },
+      { center: "shelf", row: ["scroll"], mood: "cool", ms: 1100 }
     ]
   },
   lookHerbs: {
     sound: "soft",
     beats: [
-      { center: "shelf", row: [], mood: null, ms: 600 },
-      { center: "shelf", row: ["hongre", "hanyin", "xuelian", "qingre"], mood: "dawn", ms: 1200 },
-      { center: "shelf", row: [], mood: "cool", ms: 900 }
+      { center: "shelf", row: [], mood: null, ms: 700 },
+      { center: "shelf", row: ["hongre", "hanyin"], mood: "dawn", ms: 1000 },
+      { center: "shelf", row: ["hongre", "hanyin", "xuelian", "qingre"], mood: "ember", ms: 1300 },
+      { center: "shelf", row: [], mood: "cool", ms: 1100 }
     ]
   },
   lookNeedle: {
     sound: "needle",
     beats: [
-      { center: "needle", row: [], mood: "cool", ms: 900 },
-      { center: "bronze", row: ["needle"], mood: null, ms: 1000 }
+      { center: "needle", row: [], mood: "cool", ms: 1000 },
+      { center: "needle", row: [], mood: "dawn", ms: 900 },
+      { center: "bronze", row: ["needle"], mood: null, ms: 1200 }
     ]
   },
   lookLetter: {
     sound: "wood",
     beats: [
-      { center: "letter", row: [], mood: "cool", ms: 900 },
-      { center: "scroll", row: ["letter"], mood: "ash", ms: 1000 }
+      { center: "letter", row: [], mood: "cool", ms: 1000 },
+      { center: "letter", row: [], mood: "ash", ms: 900 },
+      { center: "scroll", row: ["letter"], mood: "cool", ms: 1200 }
     ]
   },
   lookScale: {
     sound: "soft",
     beats: [
-      { center: "scale", row: [], mood: null, ms: 900 },
-      { center: "shelf", row: ["scale"], mood: "dawn", ms: 1000 }
+      { center: "scale", row: [], mood: null, ms: 1000 },
+      { center: "scale", row: [], mood: "dawn", ms: 900 },
+      { center: "shelf", row: ["scale"], mood: "cool", ms: 1200 }
     ]
   },
   lookPill: {
     sound: "soft",
     beats: [
-      { center: "pill", row: [], mood: "dawn", ms: 900 },
-      { center: "elder", row: ["pill"], mood: "cool", ms: 1000 }
+      { center: "pill", row: [], mood: "dawn", ms: 1000 },
+      { center: "pill", row: [], mood: "cool", ms: 900 },
+      { center: "elder", row: ["pill"], mood: "void", ms: 1200 }
     ]
   },
   lookSmear: {
     sound: "crack",
     beats: [
-      { center: "smear", row: [], mood: "ash", ms: 900 },
-      { center: "bowl", row: ["smear"], mood: "cool", ms: 1000 }
+      { center: "smear", row: [], mood: "ash", ms: 1000 },
+      { center: "smear", row: [], mood: "ember", ms: 900 },
+      { center: "bowl", row: ["smear"], mood: "cool", ms: 1200 }
     ]
   },
   lookBlade: {
     sound: "soft",
     beats: [
-      { center: "blade", row: [], mood: "mist", ms: 900 },
-      { center: "screen", row: ["blade"], mood: "ash", ms: 1100 }
+      { center: "blade", row: [], mood: "mist", ms: 1000 },
+      { center: "blade", row: [], mood: "ash", ms: 900 },
+      { center: "screen", row: ["blade"], mood: "void", ms: 1300 }
     ]
   },
   lookBarren: {
     sound: "soft",
     beats: [
-      { center: "wall", row: [], mood: "ash", ms: 700 },
-      { center: "brick", row: [], mood: "void", ms: 900 },
-      { center: "wall", row: [], mood: "ash", ms: 800 }
+      { center: "wall", row: [], mood: "ash", ms: 800 },
+      { center: "brick", row: [], mood: "void", ms: 1100 },
+      { center: "wall", row: [], mood: "ash", ms: 1000 },
+      { center: "wall", row: [], mood: null, ms: 900 }
     ]
   },
 
@@ -384,9 +437,10 @@ const CLIPS = {
   transit: {
     sound: "door",
     beats: [
-      { center: "door_0", row: [], mood: "ash", ms: 500 },
-      { center: "door_2", row: [], mood: "void", ms: 700 },
-      { center: "door_3", row: [], mood: "ash", ms: 600 }
+      { center: "door_0", row: [], mood: "ash", ms: 700 },
+      { center: "door_1", row: [], mood: "void", ms: 800 },
+      { center: "door_2", row: [], mood: "ash", ms: 900 },
+      { center: "door_3", row: [], mood: "void", ms: 800 }
     ]
   }
 };
@@ -549,7 +603,7 @@ export function syncAnim(state, now = performance.now()) {
     }
     if (log === "acupoint.step") soundHook?.("needle");
     if (log === "acupoint.fail") soundHook?.("needle");
-    if (log === "brew.fail.qing" || log === "brew.fail.snow" || log === "brew.fail.ratio") soundHook?.("crack");
+    if (log === "brew.fail.qing" || log === "brew.fail.snow" || log === "brew.fail.extra" || log === "brew.fail.ratio") soundHook?.("crack");
     if (log === "ko.success") soundHook?.("wood");
     if (log === "ko.fail" || log === "bagua.fail" || log === "wuxing.fail" || log === "sword.fail") {
       soundHook?.("crack");
@@ -573,7 +627,7 @@ function play(name, now, options = {}) {
     clip = {
       name,
       beats: [{ ...last, ms: 0 }],
-      shake: false
+      shake: 0
     };
     clipStarted = now;
     holdUntil = now;
@@ -593,7 +647,7 @@ function play(name, now, options = {}) {
   clip = {
     name,
     beats,
-    shake: Boolean(def.shake) && !options.soft
+    shake: options.soft ? 0 : Number(def.shake) || 0
   };
   clipStarted = now;
   holdUntil = now + clipDuration(beats);
@@ -605,18 +659,22 @@ function holdMood(ending, now) {
   const center = endingCenter(ending);
   const row = endingRow(ending);
   if (reduced) {
-    clip = { name: `${ending}-hold`, beats: [{ center, row, mood, ms: 0 }], shake: false };
+    clip = { name: `${ending}-hold`, beats: [{ center, row, mood, ms: 0 }], shake: 0 };
     clipStarted = now;
     holdUntil = now;
     return;
   }
+  const holdMs = 1800;
   clip = {
     name: `${ending}-hold`,
-    beats: [{ center, row, mood, ms: 1400 }],
-    shake: false
+    beats: [
+      { center, row, mood, ms: 900 },
+      { center, row, mood: endingMood(ending, 2) || mood, ms: holdMs - 900 }
+    ],
+    shake: 0
   };
   clipStarted = now;
-  holdUntil = now + 1400;
+  holdUntil = now + holdMs;
 }
 
 function endingCenter(ending) {
@@ -690,7 +748,7 @@ export function stageView(state, now = performance.now()) {
     mood,
     fuse,
     ash,
-    shake: Boolean(clip?.shake) && animBusy(now) ? 1 : 0,
+    shake: clip?.shake && animBusy(now) ? Number(clip.shake) : 0,
     busy: animBusy(now)
   };
 }
